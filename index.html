@@ -53,15 +53,15 @@
         #state {
             position: absolute;
             top: 20px;
-            right: 20px;
+            left: 20px;
             color: #0f0;
             font-size: 14px;
-            text-align: right;
+            text-align: left;
             text-shadow: 0 0 5px rgba(0,255,0,0.5);
         }
         #time-display {
             position: absolute;
-            top: 50px;
+            top: 20px;
             right: 20px;
             color: #fff;
             font-size: 16px;
@@ -83,7 +83,7 @@
             position: absolute;
             bottom: 24px;
             left: 20px;
-            width: 220px;
+            width: 190px;
             pointer-events: none;
         }
         #health-label {
@@ -113,7 +113,7 @@
         /* Money + wanted stars */
         #money-display {
             position: absolute;
-            top: 78px;
+            top: 72px;
             right: 20px;
             color: #7CFC8A;
             font-size: 18px;
@@ -123,7 +123,7 @@
         }
         #wanted-stars {
             position: absolute;
-            top: 102px;
+            top: 96px;
             right: 20px;
             font-size: 16px;
             letter-spacing: 3px;
@@ -164,10 +164,10 @@
         }
         #death-overlay h2 { font-size: 40px; letter-spacing: 8px; color: #e53935; }
         #respawn-timer { font-size: 18px; }
-        /* Minimal HUD container in top-left */
+        /* Minimal HUD container in top-left, below the state line */
         #hud-prompts {
             position: absolute;
-            top: 60px;
+            top: 64px;
             left: 20px;
             display: flex;
             flex-direction: column;
@@ -412,47 +412,25 @@
         }
 
         /* NOTE: duplicate #vehicle-prompt modal CSS removed — HUD style above wins */
-        #helicopter-prompt.hidden { opacity: 1; display: none; }
-        #helicopter-prompt:not(.hidden) { display: block; }
-        #helicopter-prompt {
-            position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            font-size: 18px;
-            text-align: center;
-            background: rgba(0,0,0,0.8);
-            padding: 15px 30px;
-            border: 2px solid rgba(0,255,255,0.5);
-            border-radius: 8px;
-            display: none;
-        }
-        #helicopter-prompt.show {
-            display: block;
-        }
-        #helicopter-prompt small {
-            display: block;
-            font-size: 12px;
-            margin-top: 8px;
-            color: rgba(0,255,255,0.8);
-        }
+        /* Helicopter help uses the same top-left HUD stack as other prompts (no centering, no overlap) */
         #speedometer {
             position: absolute;
-            bottom: 80px;
-            right: 40px;
+            bottom: 64px;
+            right: 20px;
             text-align: center;
             background: rgba(0,0,0,0.7);
-            padding: 20px 30px;
-            border: 2px solid rgba(0,255,0,0.5);
+            padding: 12px 22px;
+            border: 1px solid rgba(0,255,0,0.5);
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0,255,0,0.3);
         }
+        /* Keep ammo readout clear of the speedometer (which sits above it while driving) */
+        body.has-speedo #ammo-display { bottom: 150px; }
 
         /* Crime bar (1..100) */
         #crime-wrap {
             position: absolute;
-            top: 126px;
+            top: 48px;
             right: 20px;
             width: 150px;
             pointer-events: none;
@@ -576,11 +554,11 @@
             cursor: crosshair;
             pointer-events: auto;
         }
-        /* Minimap */
+        /* Minimap — bottom-right, stacked under the ammo/speedometer readouts */
         #minimap-wrap {
             position: absolute;
-            top: 70px;
-            right: 16px;
+            bottom: 20px;
+            right: 20px;
             width: 128px;
             height: 128px;
             border-radius: 8px;
@@ -612,8 +590,22 @@
             #minimap-wrap {
                 width: 96px;
                 height: 96px;
-                top: 40px;
+                bottom: 10px;
                 right: 10px;
+            }
+            /* On small landscape screens the mobile buttons own the bottom-right,
+               so park the minimap top-right instead (under the crime bar). */
+            body.outbound-mobile #minimap-wrap {
+                bottom: auto;
+                top: 120px;
+                right: 10px;
+            }
+            body.outbound-playing:not(.outbound-mobile) #controls {
+                font-size: 10px;
+                line-height: 1.45;
+                bottom: 12px;
+                left: 12px;
+                max-width: 320px;
             }
         }
 
@@ -700,6 +692,24 @@
         body.outbound-mobile #mobile-hints { display: block; }
         body.outbound-mobile #controls { display: none; }
         body.outbound-mobile #title { font-size: 16px; letter-spacing: 4px; top: 48px; }
+        /* Mobile: minimap moves to the right side under the money/wanted/crime stack,
+           ammo sits directly above it, and the speedo/alt readout docks at the top-right
+           so nothing ever covers anything else (joystick/buttons own the bottom corners). */
+        body.outbound-mobile #minimap-wrap {
+            bottom: 20px;
+            top: auto;
+            right: 20px;
+        }
+        body.outbound-mobile #ammo-display { bottom: 158px; right: 20px; }
+        body.outbound-mobile.has-speedo #ammo-display { bottom: 158px; }
+        body.outbound-mobile #speedometer {
+            bottom: auto;
+            top: 130px;
+            right: 20px;
+            padding: 8px 18px;
+        }
+        body.outbound-mobile #speedometer > div:first-child { font-size: 26px !important; }
+        body.outbound-mobile #speedometer > div:last-child { font-size: 11px; }
         @media (prefers-reduced-motion: reduce) {
             #boot-screen .boot-bar > span { animation: none; width: 100%; }
         }
@@ -12408,7 +12418,7 @@ class OutboundGame {
             this.inHelicopter = false;
             this.character.getMesh().visible = true;
         }
-        document.getElementById('speedometer').style.display = 'none';
+        this._setSpeedoVisible(false);
     }
 
     respawn() {
@@ -12473,7 +12483,13 @@ class OutboundGame {
         }, { once: true });
     }
 
-    // Minimap: top-right, shows player/vehicle on city map (day/night safe)
+    _setSpeedoVisible(show) {
+        const el = document.getElementById('speedometer');
+        if (el) el.style.display = show ? 'block' : 'none';
+        document.body.classList.toggle('has-speedo', !!show);
+    }
+
+    // Minimap: right side (bottom-right desktop / above ammo on mobile), day/night safe
     updateMinimap() {
         const canvas = document.getElementById('minimap');
         const dot = document.getElementById('minimap-player');
@@ -12620,12 +12636,11 @@ class OutboundGame {
                 this.character.getMesh().position.copy(exitPos);
                 this.controller.position.copy(exitPos);
                 helicopterPrompt.classList.add('hidden');
-                document.getElementById('speedometer').style.display = 'none';
+                this._setSpeedoVisible(false);
             }
 
-            // Show altitude indicator instead of speedometer
-            const speedometer = document.getElementById('speedometer');
-            speedometer.style.display = 'block';
+            // Altitude readout (reuses the speedo panel)
+            this._setSpeedoVisible(true);
 
             // Update altitude display
             const altitude = Math.round(this.helicopter.position.y * 10);
@@ -12660,12 +12675,11 @@ class OutboundGame {
                 this.controller.position.copy(exitPos);
                 this.vehicle = this.playerCar;
                 vehiclePrompt.classList.add('hidden');
-                document.getElementById('speedometer').style.display = 'none';
+                this._setSpeedoVisible(false);
             }
 
             // Show speedometer
-            const speedometer = document.getElementById('speedometer');
-            speedometer.style.display = 'block';
+            this._setSpeedoVisible(true);
 
             // Update speedometer
             const speed = Math.abs(this.vehicle.speed);
@@ -12691,7 +12705,7 @@ class OutboundGame {
             const distanceToHelicopter = nearby && nearby.kind === 'heli' ? nearby.dist : playerPos.distanceTo(helicopterPos);
 
             // Hide speedometer when on foot
-            document.getElementById('speedometer').style.display = 'none';
+            this._setSpeedoVisible(false);
 
             // Handle enter vehicle
             if (fKeyDown && !this.fKeyWasDown && nearby && nearby.kind === 'car') {
@@ -12876,6 +12890,13 @@ function startOutboundGame() {
         }
     });
 }
+
+(function detectMobileUI() {
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouch && /Android|iPhone|iPad|iOS|Mobile/i.test(navigator.userAgent)) {
+        document.body.classList.add('outbound-mobile');
+    }
+})();
 
 (function initLanding() {
     const landing = document.getElementById('landing');
