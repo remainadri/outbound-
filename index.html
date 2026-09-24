@@ -5102,8 +5102,8 @@ class DayNightCycle {
 
         this.sun = new THREE.DirectionalLight(0xffeedd, 1.0);
         this.sun.position.set(30, 50, 20);
-        this.sun.castShadow = (_gfx.shadows !== false);
         const _gfx = window.OUTBOUND_GFX || {};
+        this.sun.castShadow = (_gfx.shadows !== false);
         const _sms = _gfx.shadowMapSize || 1024;
         this.sun.shadow.mapSize.width = _sms;
         this.sun.shadow.mapSize.height = _sms;
