@@ -818,9 +818,79 @@ const CONFIG = {
     crimeDecayRate: 1.6,        // crime points shed per second while staying clean
     arrestRadius: 3.2,          // how close a cop must get to cuff you
     // NPC AI / environment interaction
-    npcCount: 40,               // total pedestrians roaming the map
+    npcCount: 130,              // total pedestrians roaming the map (visible population)
     trafficCount: 24,           // ambient AI-driven cars
+    // World density (props + grass) — deterministic placement, instanced rendering
+    propTarget: 640,            // minimum environmental props placed in the world
+    grassBlades: 9000,          // instanced grass blade budget (single draw call)
+    grassClumps: 1600,          // instanced tall-grass / weed clump budget
 };
+
+// ============================================================
+// WORLD DENSITY ENGINE (ADD-ONLY SUPPORT SYSTEMS)
+// - RoadMask: clearance queries against the EXISTING road polylines
+// - DensityRng: deterministic seeded PRNG (same world every load)
+// - StructureRelocator: nudges any structure off a road at build time
+//   (position/rotation only — appearance & colliders preserved)
+// These run inside World.buildDesignedCity() before/after placement.
+// ============================================================
+class RoadMask {
+    constructor(polylines) { this.segs = polylines; }
+    // distance from point to segment (x1,z1)-(x2,z2)
+    _segDist(px, pz, s) {
+        const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+        const l2 = dx * dx + dz * dz;
+        let t = l2 > 0 ? ((px - s.x1) * dx + (pz - s.z1) * dz) / l2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        const cx = s.x1 + dx * t, cz = s.z1 + dz * t;
+        return Math.hypot(px - cx, pz - cz);
+    }
+    distToRoad(px, pz) {
+        let best = Infinity;
+        for (let i = 0; i < this.segs.length; i++) {
+            const s = this.segs[i];
+            // quick AABB reject (+ half width) before exact distance
+            const hw = s.width / 2 + 2;
+            const minX = Math.min(s.x1, s.x2) - hw, maxX = Math.max(s.x1, s.x2) + hw;
+            const minZ = Math.min(s.z1, s.z2) - hw, maxZ = Math.max(s.z1, s.z2) + hw;
+            if (px < minX || px > maxX || pz < minZ || pz > maxZ) continue;
+            const d = this._segDist(px, pz, s) - s.width / 2;
+            if (d < best) best = d;
+        }
+        return best;
+    }
+    // is a footprint (radius r) fully clear of road surface + shoulder margin?
+    isClear(px, pz, r) { return this.distToRoad(px, pz) >= r; }
+    // find nearest valid position for a structure of footprint radius r
+    relocate(x, z, r, rng) {
+        if (this.isClear(x, z, r)) return null; // already fine — keep it
+        const angles = 12;
+        for (let ring = 1; ring <= 8; ring++) {
+            const step = r * 0.9;
+            for (let a = 0; a < angles; a++) {
+                const ang = (a / angles) * Math.PI * 2 + rng() * 0.4;
+                const nx = x + Math.cos(ang) * step * ring;
+                const nz = z + Math.sin(ang) * step * ring;
+                if (Math.abs(nx) > 1090 || Math.abs(nz) > 1090) continue;
+                if (this.isClear(nx, nz, r)) return { x: nx, z: nz };
+            }
+        }
+        return null;
+    }
+}
+
+class DensityRng {
+    constructor(seed) { this.s = seed | 0; }
+    next() {
+        this.s = (this.s + 0x6D2B79F5) | 0;
+        let t = Math.imul(this.s ^ (this.s >>> 15), 1 | this.s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    range(a, b) { return a + (b - a) * this.next(); }
+    int(a, b) { return Math.floor(this.range(a, b + 1)); }
+    pick(arr) { return arr[Math.floor(this.next() * arr.length)]; }
+}
 
 // ============================================================
 // PLAYER STATES
@@ -2663,10 +2733,11 @@ class WorldSystems {
         this.pedestrians = [];
         this.traffic = [];
         this.police = [];
-        this.PED_COUNT = 14;
+        this.PED_COUNT = CONFIG.npcCount;   // 130 — full visible population (was 14)
         this.TRAFFIC_COUNT = 10;
         this.MAX_POLICE = 4;
         this.updateTimer = 0;
+        this.frameNo = 0;
 
         for (let i = 0; i < this.PED_COUNT; i++) {
             const p = new Pedestrian(this.scene, this.world, i);
@@ -2687,6 +2758,25 @@ class WorldSystems {
     respawnPed(ped) {
         const pp = this.game.playerWorldPos || new THREE.Vector3();
         ped.respawnNear(pp);
+        // POPULATION SPREAD (ADD): deterministic per-NPC home zone so the
+        // 130+ pedestrians distribute across downtown, residential rings,
+        // suburbs and outskirts instead of clustering near the player.
+        if (!ped._spreadDone && this.world._roadPolylines && this.world._roadPolylines.length) {
+            ped._spreadDone = true;
+            const roads = this.world._roadPolylines;
+            for (let i = 0; i < 24; i++) {
+                const seg = roads[(ped.index * 7 + i * 13) % roads.length];
+                const t = ((ped.index * 37 + i * 61) % 97) / 97;
+                const x = seg.x1 + (seg.x2 - seg.x1) * t;
+                const z = seg.z1 + (seg.z2 - seg.z1) * t;
+                const off = (seg.width / 2) + 1.5 + ((ped.index + i) % 3);
+                const ox = x - (seg.z2 - seg.z1) * off, oz = z + (seg.x2 - seg.x1) * off;
+                const l = Math.hypot(ox - x, oz - z) || 1;
+                const px = x + (ox - x) / l * off, pz = z + (oz - z) / l * off;
+                const d = Math.hypot(px - pp.x, pz - pp.z);
+                if (d > 30 && d < 200) { ped.spawnAt(px, pz); break; }
+            }
+        }
     }
 
     spawnPoliceCar() {
@@ -2714,16 +2804,21 @@ class WorldSystems {
         const pp = game.playerWorldPos;
 
         // --- Pedestrians (only simulate near player) ---
+        // PERF: with 130+ NPCs, respawn a few per frame instead of all at once,
+        // and stagger mid-distance updates into buckets to keep CPU cost low.
+        this._respawnBudget = 4;
         for (const ped of this.pedestrians) {
             const d = Math.hypot(ped.position.x - pp.x, ped.position.z - pp.z);
             if (ped.state === 'DEAD') {
-                if (ped.deadTimer > 20 || d > 220) this.respawnPed(ped);
-                else ped.update(deltaTime, pp, false);
+                if ((ped.deadTimer > 20 || d > 220) && this._respawnBudget-- > 0) this.respawnPed(ped);
+                else if (ped.deadTimer <= 20 && d <= 220) ped.update(deltaTime, pp, false);
                 continue;
             }
-            if (d > 220) { this.respawnPed(ped); continue; }
+            if (d > 220) { if (this._respawnBudget-- > 0) this.respawnPed(ped); continue; }
             if (d < 90) ped.update(deltaTime, pp, game.playerThreatening);
+            else if (((ped.index + this.frameNo) & 7) === 0) ped.update(deltaTime * 8, pp, false);
         }
+        this.frameNo = (this.frameNo + 1) & 1023;
 
         // --- Traffic ---
         for (const car of this.traffic) {
@@ -5426,6 +5521,15 @@ class World {
     }
 
     _placeGroup(group, x, z, rotY, colW, colH, colD) {
+        // ROAD-SAFE PLACEMENT (FIX): if this structure's footprint overlaps a
+        // road + shoulder clearance, MOVE it to the nearest valid position.
+        // Appearance/geometry/material/collider size are preserved exactly —
+        // only x/z change. Deterministic (seeded), same result every load.
+        if (this._roadMask && colW > 0) {
+            const footprint = Math.max(colW, colD) * 0.5 + 2.5; // road + shoulder + safety margin
+            const spot = this._roadMask.relocate(x, z, footprint, this._densityRng);
+            if (spot) { x = spot.x; z = spot.z; this._structuresMoved++; }
+        }
         const gy = this.getGroundHeight(x, z);
         group.position.set(x, gy, z);
         group.rotation.y = rotY || 0;
@@ -5488,6 +5592,311 @@ class World {
         this.placeParkedVehicles();
         this.placeConstructionSites();
         this.placeOutskirtsForest();
+
+        // --- World density pass (ADD-ONLY): road mask is built AFTER all road
+        //     segments exist, so structure relocation + prop/grass placement
+        //     use the complete, authoritative road network. Deterministic. ---
+        this._roadMask = new RoadMask(this._roadPolylines);
+        this._densityRng = new DensityRng(90210);
+        this._structuresMoved = 0;
+        this.relocateStructuresOffRoads();
+        this.placeDensityProps();
+        this.placeDensityGrass();
+    }
+
+    // ============================================================
+    // ROAD-SAFE STRUCTURE CORRECTION
+    // Walk every existing box collider that belongs to a *structure*
+    // (buildings/houses/sheds/barns — i.e. footprint >= 4m) and, if it
+    // overlaps the road clearance zone, slide BOTH the visual group and
+    // its collider to the nearest valid position. Identity preserved.
+    // ============================================================
+    relocateStructuresOffRoads() {
+        const mask = this._roadMask, rng = this._densityRng;
+        for (const c of this.collisionSystem.colliders) {
+            if (!c || c.type !== 'box') continue;
+            const w = c.width || 0, d = c.depth || 0;
+            if (w < 4 || d < 4) continue;               // small props keep their spot
+            const r = Math.max(w, d) * 0.5 + 2.5;       // footprint + shoulder + safety
+            let x = c.position.x, z = c.position.z;
+            if (mask.isClear(x, z, r)) continue;         // already valid — do not touch
+            const spot = mask.relocate(x, z, r, rng);
+            if (!spot) continue;
+            const dx = spot.x - x, dz = spot.z - z;
+            c.position.set(spot.x, c.position.y, spot.z);
+            // move the matching visual object(s) sitting at the old position
+            for (const obj of this.scene.children) {
+                if (obj === undefined || !obj.visible) continue;
+                if (Math.abs(obj.position.x - x) < 0.01 && Math.abs(obj.position.z - z) < 0.01 &&
+                    obj.position.y > -1) {
+                    obj.position.x += dx; obj.position.z += dz;
+                }
+            }
+            // minimap entry too
+            for (const lm of this._minimapLandmarks) {
+                if (Math.abs(lm.x - x) < 0.01 && Math.abs(lm.z - z) < 0.01) { lm.x = spot.x; lm.z = spot.z; }
+            }
+            this._structuresMoved++;
+        }
+    }
+
+    // ============================================================
+    // 500+ ENVIRONMENTAL PROPS — deterministic, grouped, instanced
+    // Each prop type = ONE InstancedMesh (shared geometry + material),
+    // so ~20 draw calls cover hundreds of placed objects.
+    // Placement rules: roadside strips follow road polylines with safe
+    // clearance; rural/city/natural props form believable clusters.
+    // ============================================================
+    placeDensityProps() {
+        const mask = this._roadMask, rng = this._densityRng;
+        const MAXR = 1060;
+        this._propCount = 0;
+
+        const addInst = (geo, mat, transforms, shadows) => {
+            if (!transforms.length) return null;
+            const im = new THREE.InstancedMesh(geo, mat, transforms.length);
+            const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(),
+                  e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+            for (let i = 0; i < transforms.length; i++) {
+                const t = transforms[i];
+                p.set(t[0], t[1], t[2]);
+                e.set(0, t[3] || 0, 0); q.setFromEuler(e);
+                s.set(t[4] || 1, t[5] || 1, t[6] || 1);
+                m4.compose(p, q, s);
+                im.setMatrixAt(i, m4);
+            }
+            im.instanceMatrix.needsUpdate = true;
+            im.castShadow = !!shadows; im.receiveShadow = false;
+            im.frustumCulled = true;
+            this.scene.add(im);
+            this._propCount += transforms.length;
+            return im;
+        };
+
+        const lambert = (hex) => new THREE.MeshLambertMaterial({ color: hex, flatShading: true });
+
+        // ---- shared geometries (created once) ----
+        const gRock   = new THREE.IcosahedronGeometry(0.55, 0);
+        const gStone  = new THREE.DodecahedronGeometry(0.28, 0);
+        const gLog    = new THREE.CylinderGeometry(0.16, 0.2, 1.8, 6);
+        const gStump  = new THREE.CylinderGeometry(0.34, 0.42, 0.5, 7);
+        const gBush   = new THREE.IcosahedronGeometry(0.6, 0);
+        const gPost   = new THREE.CylinderGeometry(0.06, 0.07, 1.5, 5);
+        const gBarrel = new THREE.CylinderGeometry(0.32, 0.32, 0.9, 8);
+        const gCrate  = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+        const gBin    = new THREE.BoxGeometry(0.55, 0.9, 0.55);
+        const gBench  = new THREE.BoxGeometry(1.8, 0.12, 0.5);
+        const gSignSm = new THREE.BoxGeometry(0.9, 0.6, 0.06);
+        const gMarker = new THREE.BoxGeometry(0.12, 0.7, 0.12);
+        const gTank   = new THREE.CylinderGeometry(1.1, 1.1, 1.6, 8);
+        const gHay    = new THREE.CylinderGeometry(0.7, 0.7, 1.1, 8);
+        const gFlower = new THREE.IcosahedronGeometry(0.14, 0);
+        const gMail   = new THREE.BoxGeometry(0.35, 0.5, 0.25);
+        const gKerb   = new THREE.BoxGeometry(1.2, 0.16, 0.16);
+
+        const mRock  = lambert(0x8a8f7e), mStone = lambert(0x9aa08c);
+        const mWood  = lambert(0x6e4a2f), mWoodLt = lambert(0x8b6a45);
+        const mLeafA = lambert(0x4e7d3a), mLeafB = lambert(0x6b8f3f);
+        const mMetal = lambert(0x77808a), mBlue  = lambert(0x3a6ea5);
+        const mGreen = lambert(0x2e7d4f), mRed   = lambert(0xb03a2e);
+        const mYellow= lambert(0xd9a520), mGrey  = lambert(0x666b70);
+        const mWhite = lambert(0xd8d8cf), mStraw = lambert(0xc2a35a);
+        const mPink  = lambert(0xd98bb0), mGold  = lambert(0xe3c14f);
+
+        const T = { rock:[], stone:[], log:[], stump:[], bushA:[], bushB:[], post:[], barrel:[],
+                    crate:[], bin:[], bench:[], signSm:[], marker:[], tank:[], hay:[], flowerR:[],
+                    flowerY:[], flowerP:[], mail:[], kerb:[] };
+
+        const inBounds = (x, z) => Math.abs(x) < MAXR && Math.abs(z) < MAXR;
+        const nearWater = (x, z) => (z > 150 && z < 200 && x > 40); // harbor/river band used by existing waterfront
+        const put = (arr, x, z, y, rot, sy) => arr.push([x, y == null ? 0 : y, z, rot || 0, 1, sy || 1, 1]);
+
+        // ---- A. ROADSIDE STRIPS: poles → signs → markers → rocks → bushes ----
+        // Walk each road polyline and lay props along both sides at safe offsets.
+        for (const s of this._roadPolylines) {
+            const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+            const len = Math.hypot(dx, dz);
+            if (len < 20) continue;
+            const ux = dx / len, uz = dz / len;
+            const off = s.width / 2 + 2.2;             // clear of drivable surface
+            const spacing = 26 + rng.next() * 10;
+            for (let t = 4; t < len - 4; t += spacing) {
+                const bx = s.x1 + ux * t, bz = s.z1 + uz * t;
+                for (const side of [1, -1]) {
+                    if (rng.next() < 0.35) continue;    // natural gaps
+                    const px = bx - uz * off * side, pz = bz + ux * off * side;
+                    if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.5)) continue;
+                    const roll = rng.next();
+                    if (roll < 0.22)      put(T.post,   px, pz, 0.75, 0, 1);          // utility/telephone pole
+                    else if (roll < 0.34) put(T.signSm, px, pz, 1.6, Math.atan2(-uz, ux) + Math.PI / 2, 1); // road sign
+                    else if (roll < 0.48) put(T.marker, px, pz, 0.35, 0, 1);          // roadside marker
+                    else if (roll < 0.62) put(T.kerb,   px, pz, 0.08, Math.atan2(-dz, dx), 1); // edge stone
+                    else if (roll < 0.76) put(T.bushA,  px, pz, 0.35, rng.range(0, 6.28), rng.range(0.8, 1.3));
+                    else if (roll < 0.88) put(T.rock,   px, pz, 0.25, rng.range(0, 6.28), rng.range(0.6, 1.2));
+                    else                  put(T.stone,  px, pz, 0.12, rng.range(0, 6.28), 1);
+                }
+            }
+        }
+
+        // ---- B. FENCE LINES along suburban/residential blocks ----
+        const fenceRuns = [
+            [-220, -140, -140, -140], [-220, -140, -220, -60], [140, -140, 220, -140],
+            [220, -140, 220, -60], [-60, 140, 60, 160], [160, 40, 240, 40],
+            [-260, 40, -160, 40], [-260, 40, -260, 120], [60, -220, 160, -220],
+            [-160, -220, -60, -220], [260, -60, 260, 60], [-60, 220, 80, 240],
+        ];
+        for (const [x1, z1, x2, z2] of fenceRuns) {
+            const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz);
+            const n = Math.floor(len / 2.4);
+            for (let i = 0; i <= n; i++) {
+                const px = x1 + dx * (i / n), pz = z1 + dz * (i / n);
+                if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.6)) continue;
+                put(T.post, px, pz, 0.7, 0, 1);
+                if (i % 6 === 0 && rng.next() < 0.5) put(T.stump, px + 1.2, pz + 0.8, 0.25, 0, 1);
+            }
+        }
+
+        // ---- C. RURAL CLUSTERS: farm yards (barrels, crates, hay, tanks) ----
+        const farmSpots = [[-320, -260], [340, -230], [-380, 240], [360, 300],
+                           [-180, 320], [220, -320], [-420, -120], [430, 120],
+                           [-300, -330], [300, 350]];
+        for (const [fx, fz] of farmSpots) {
+            if (!mask.isClear(fx, fz, 8)) continue;
+            const count = 10 + rng.int(0, 6);
+            for (let i = 0; i < count; i++) {
+                const px = fx + rng.range(-9, 9), pz = fz + rng.range(-9, 9);
+                if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.6)) continue;
+                const roll = rng.next();
+                if (roll < 0.2)       put(T.barrel, px, pz, 0.45, rng.range(0, 6.28), 1);
+                else if (roll < 0.4)  put(T.crate,  px, pz, 0.35, rng.range(0, 1.2), 1);
+                else if (roll < 0.58) put(T.hay,    px, pz, 0.55, rng.range(0, 6.28), 1);
+                else if (roll < 0.68) put(T.tank,   px, pz, 0.9, 0, 1);
+                else if (roll < 0.8)  put(T.log,    px, pz, 0.2, rng.range(0, 6.28), 1);
+                else if (roll < 0.9)  put(T.mail,   px, pz, 0.3, 0, 1);
+                else                  put(T.stone,  px, pz, 0.12, 0, 1);
+            }
+            // ring a few bushes/trees around each yard
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2 + rng.next();
+                const px = fx + Math.cos(a) * 14, pz = fz + Math.sin(a) * 14;
+                if (inBounds(px, pz) && mask.isClear(px, pz, 0.8))
+                    put(rng.next() < 0.5 ? T.bushA : T.bushB, px, pz, 0.35, a, rng.range(0.9, 1.5));
+            }
+        }
+
+        // ---- D. CITY OUTSKIRTS / SIDEWALK LIFE: bins, benches, flowers, mailboxes ----
+        const citySpots = [[0, 0], [-100, -100], [100, -100], [100, 100], [-100, 100],
+                           [-200, -80], [200, -80], [-200, 80], [160, 80], [0, -180], [0, 180]];
+        for (const [cx, cz] of citySpots) {
+            const count = 14 + rng.int(0, 8);
+            for (let i = 0; i < count; i++) {
+                const px = cx + rng.range(-34, 34), pz = cz + rng.range(-34, 34);
+                if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.7)) continue;
+                const roll = rng.next();
+                if (roll < 0.2)       put(T.bin,    px, pz, 0.45, rng.range(0, 1), 1);
+                else if (roll < 0.32) put(T.bench,  px, pz, 0.45, rng.range(0, 6.28), 1);
+                else if (roll < 0.5)  put(T.flowerR,px, pz, 0.18, 0, 1);
+                else if (roll < 0.64) put(T.flowerY,px, pz, 0.18, 0, 1);
+                else if (roll < 0.74) put(T.flowerP,px, pz, 0.18, 0, 1);
+                else if (roll < 0.84) put(T.mail,   px, pz, 0.3, rng.range(0, 6.28), 1);
+                else if (roll < 0.92) put(T.stone,  px, pz, 0.12, 0, 1);
+                else                  put(T.bushB,  px, pz, 0.3, 0, rng.range(0.7, 1.1));
+            }
+        }
+
+        // ---- E. NATURAL SCATTER: rocks/logs/stumps/bushes through countryside ----
+        const natSeeds = [[-500, -400], [500, -420], [-520, 350], [520, 420],
+                          [-450, 60], [470, -60], [0, -450], [-250, 450], [250, 450], [0, 420]];
+        for (const [nx0, nz0] of natSeeds) {
+            const count = 26 + rng.int(0, 10);
+            for (let i = 0; i < count; i++) {
+                const px = nx0 + rng.range(-70, 70), pz = nz0 + rng.range(-70, 70);
+                if (!inBounds(px, pz) || nearWater(px, pz)) continue;
+                if (!mask.isClear(px, pz, 0.8)) continue;
+                const roll = rng.next();
+                if (roll < 0.3)       put(T.rock,   px, pz, 0.22, rng.range(0, 6.28), rng.range(0.6, 1.6));
+                else if (roll < 0.45) put(T.stone,  px, pz, 0.12, rng.range(0, 6.28), rng.range(0.8, 1.4));
+                else if (roll < 0.6)  put(T.bushA,  px, pz, 0.32, rng.range(0, 6.28), rng.range(0.8, 1.6));
+                else if (roll < 0.72) put(T.bushB,  px, pz, 0.32, rng.range(0, 6.28), rng.range(0.8, 1.6));
+                else if (roll < 0.82) put(T.log,    px, pz, 0.18, rng.range(0, 6.28), 1);
+                else if (roll < 0.9)  put(T.stump,  px, pz, 0.25, rng.range(0, 6.28), rng.range(0.8, 1.3));
+                else                  put(T.flowerY,px, pz, 0.16, 0, 1);
+            }
+        }
+
+        // ---- commit instances ----
+        addInst(gRock,   mRock,   T.rock);
+        addInst(gStone,  mStone,  T.stone);
+        addInst(gLog,    mWood,   T.log);
+        addInst(gStump,  mWoodLt, T.stump);
+        addInst(gBush,   mLeafA,  T.bushA);
+        addInst(gBush,   mLeafB,  T.bushB);
+        addInst(gPost,   mWood,   T.post, true);
+        addInst(gBarrel, mBlue,   T.barrel);
+        addInst(gCrate,  mWoodLt, T.crate);
+        addInst(gBin,    mGreen,  T.bin);
+        addInst(gBench,  mWood,   T.bench);
+        addInst(gSignSm, mMetal,  T.signSm, true);
+        addInst(gMarker, mWhite,  T.marker);
+        addInst(gTank,   mGrey,   T.tank, true);
+        addInst(gHay,    mStraw,  T.hay);
+        addInst(gFlower, mRed,    T.flowerR);
+        addInst(gFlower, mGold,   T.flowerY);
+        addInst(gFlower, mPink,   T.flowerP);
+        addInst(gMail,   mRed,    T.mail);
+        addInst(gKerb,   mStone,  T.kerb);
+    }
+
+    // ============================================================
+    // DENSE STYLIZED GRASS — 2 InstancedMeshes (blades + clumps).
+    // Distance-aware chunking: denser near town core & field bands,
+    // always excluded from roads/sidewalks via the road mask.
+    // ============================================================
+    placeDensityGrass() {
+        const mask = this._roadMask, rng = this._densityRng;
+        const bladeGeo = new THREE.ConeGeometry(0.055, 0.55, 3, 1, true);
+        bladeGeo.translate(0, 0.275, 0);
+        const clumpGeo = new THREE.IcosahedronGeometry(0.32, 0);
+        clumpGeo.scale(1.15, 0.75, 1.15);
+        const bladeMat = new THREE.MeshLambertMaterial({ color: 0x67923f, flatShading: true, side: THREE.DoubleSide });
+        const clumpMat = new THREE.MeshLambertMaterial({ color: 0x7ba24e, flatShading: true });
+
+        const fill = (count, minRoadDist) => {
+            const list = [];
+            let guard = 0;
+            while (list.length < count && guard++ < count * 6) {
+                const x = rng.range(-1050, 1050), z = rng.range(-1050, 1050);
+                if (mask.distToRoad(x, z) < minRoadDist) continue;
+                const gy = this.getGroundHeight(x, z);
+                if (gy < 0.02) continue; // skip water
+                list.push([x, gy, z, rng.range(0, 6.28), rng.range(0.7, 1.6), rng.range(0.8, 1.8), rng.range(0.7, 1.6)]);
+            }
+            return list;
+        };
+
+        const build = (geo, mat, list, castShadow) => {
+            if (!list.length) return;
+            const im = new THREE.InstancedMesh(geo, mat, list.length);
+            const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(),
+                  e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+            const col = new THREE.Color();
+            for (let i = 0; i < list.length; i++) {
+                const t = list[i];
+                p.set(t[0], t[1], t[2]); e.set(0, t[3], 0); q.setFromEuler(e);
+                s.set(t[4], t[5], t[6]); m4.compose(p, q, s);
+                im.setMatrixAt(i, m4);
+                // subtle per-instance green→olive variation
+                col.setHSL(0.26 + (t[3] % 1) * 0.06, 0.45, 0.3 + (t[4] % 1) * 0.14);
+                im.setColorAt(i, col);
+            }
+            im.instanceMatrix.needsUpdate = true;
+            if (im.instanceColor) im.instanceColor.needsUpdate = true;
+            im.castShadow = castShadow; im.receiveShadow = false;
+            this.scene.add(im);
+        };
+
+        build(bladeGeo, bladeMat, fill(CONFIG.grassBlades, 1.6), false);
+        build(clumpGeo, clumpMat, fill(CONFIG.grassClumps, 2.0), false);
     }
 
     // Deterministic PRNG for minor decoration only (core layout is hand-placed)
