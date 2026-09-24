@@ -463,6 +463,133 @@
             box-shadow: 0 0 20px rgba(0,255,0,0.3);
         }
 
+        /* Crime bar (1..100) */
+        #crime-wrap {
+            position: absolute;
+            top: 126px;
+            right: 20px;
+            width: 150px;
+            pointer-events: none;
+        }
+        #crime-label {
+            color: rgba(255,255,255,0.75);
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin-bottom: 3px;
+            text-align: right;
+            text-shadow: 0 1px 2px #000;
+        }
+        #crime-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        #crime-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ffb300, #e53935);
+            transition: width 0.3s ease;
+        }
+        /* Weapon wheel */
+        #weapon-wheel {
+            position: fixed;
+            inset: 0;
+            z-index: 25;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        #weapon-wheel.active { opacity: 1; }
+        .ww-slot {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 128px;
+            height: 128px;
+            margin-left: -64px;
+            margin-top: -64px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, rgba(45,55,75,0.95), rgba(10,14,22,0.95));
+            border: 2px solid rgba(255,255,255,0.25);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .ww-icon { font-size: 40px; line-height: 1; filter: drop-shadow(0 0 4px rgba(0,0,0,0.8)); }
+        .ww-name { font-size: 10px; letter-spacing: 1px; text-align: center; text-shadow: 0 1px 2px #000; }
+        .ww-slot.sel {
+            border-color: #ffd54f;
+            background: radial-gradient(circle at 35% 30%, rgba(120,100,30,0.98), rgba(40,32,8,0.98));
+            transform: translate(var(--tx), var(--ty)) scale(1.12);
+            box-shadow: 0 0 24px rgba(255,200,60,0.6);
+        }
+        #weapon-wheel-title {
+            position: absolute;
+            left: 50%;
+            top: calc(50% - 250px);
+            transform: translateX(-50%);
+            color: #fff;
+            font-size: 15px;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.4), 0 1px 2px #000;
+        }
+        /* GPS toast */
+        #gps-toast {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #4fc3f7;
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px rgba(79,195,247,0.6), 0 1px 2px #000;
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        #gps-toast.show { opacity: 1; }
+        /* Fullscreen map (press Q) */
+        #bigmap {
+            position: fixed;
+            inset: 0;
+            z-index: 30;
+            background: rgba(4, 8, 12, 0.92);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+        }
+        #bigmap.active { display: flex; }
+        #bigmap-header {
+            color: #fff;
+            font-size: 18px;
+            letter-spacing: 6px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.3);
+        }
+        #bigmap-hint {
+            color: rgba(255,255,255,0.6);
+            font-size: 11px;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+        #bigmap-canvas {
+            width: min(78vmin, 640px);
+            height: min(78vmin, 640px);
+            border: 2px solid rgba(255,255,255,0.35);
+            border-radius: 10px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.8);
+            cursor: crosshair;
+            pointer-events: auto;
+        }
         /* Minimap */
         #minimap-wrap {
             position: absolute;
@@ -533,7 +660,9 @@
             CTRL - Crouch<br>
             SPACE - Jump<br>
             F - Enter Vehicle<br>
-            G - Fire Pistol · R - Reload<br>
+            TAB - Weapon Wheel · 1-8 Quick Select<br>
+            G - Fire · R - Reload<br>
+            Q - Map &amp; GPS<br>
             Mouse - Look
         </div>
         <div id="state">STATE: IDLE</div>
@@ -551,8 +680,13 @@
         </div>
         <div id="money-display">$0</div>
         <div id="wanted-stars">★★★★★</div>
-        <div id="ammo-display"><small>PISTOL · G TO FIRE · R RELOAD</small><span id="ammo-text">12 / ∞</span></div>
+        <div id="crime-wrap">
+            <div id="crime-label">CRIME 0</div>
+            <div id="crime-bar-bg"><div id="crime-bar-fill"></div></div>
+        </div>
+        <div id="ammo-display"><small>PISTOL · G TO FIRE · R RELOAD</small><span id="ammo-text">∞</span></div>
         <div id="damage-flash"></div>
+        <div id="gps-toast"></div>
         <div id="death-overlay">
             <h2>WASTED</h2>
             <div id="respawn-timer">Respawning in 5...</div>
@@ -566,6 +700,18 @@
             <canvas id="minimap" width="128" height="128"></canvas>
             <div id="minimap-player"></div>
         </div>
+    </div>
+
+    <!-- Weapon wheel overlay (TAB) -->
+    <div id="weapon-wheel">
+        <div id="weapon-wheel-title">WEAPON WHEEL — RELEASE TAB TO SELECT · 1-8 QUICK SELECT</div>
+    </div>
+
+    <!-- Fullscreen map with GPS waypoint (Q) -->
+    <div id="bigmap">
+        <div id="bigmap-header">OUTBOUND — MAP</div>
+        <canvas id="bigmap-canvas" width="640" height="640"></canvas>
+        <div id="bigmap-hint">CLICK TO SET GPS WAYPOINT · Q / ESC TO CLOSE</div>
     </div>
 
     <!-- Mobile Controls -->
@@ -642,7 +788,7 @@ const CONFIG = {
 
     // Day/Night cycle
     dayDuration: 1440,
-    startTime: 12.0,
+    startTime: 18.2, // begin in golden-hour sunset for the cinematic opening look
 
     // Vehicle
     vehicleEnterDistance: 3.0,
@@ -666,10 +812,85 @@ const CONFIG = {
     healthRegenRate: 4.0,       // HP per second while regenerating
 
     // Combat / wanted system
-    gunDamage: 34,              // pistol damage per shot (3 shots to kill)
+    gunDamage: 34,              // base pistol damage per shot (3 shots to kill)
     moneyPerKill: 50,           // bounty cash reward
     trafficHitWanted: 1,        // wanted stars for running over a pedestrian
+    crimeDecayRate: 1.6,        // crime points shed per second while staying clean
+    arrestRadius: 3.2,          // how close a cop must get to cuff you
+    // NPC AI / environment interaction
+    npcCount: 130,              // total pedestrians roaming the map (visible population)
+    trafficCount: 24,           // ambient AI-driven cars
+    // World density (props + grass) — deterministic placement, instanced rendering
+    propTarget: 640,            // minimum environmental props placed in the world
+    grassBlades: 9000,          // instanced grass blade budget (single draw call)
+    grassClumps: 1600,          // instanced tall-grass / weed clump budget
 };
+
+// ============================================================
+// WORLD DENSITY ENGINE (ADD-ONLY SUPPORT SYSTEMS)
+// - RoadMask: clearance queries against the EXISTING road polylines
+// - DensityRng: deterministic seeded PRNG (same world every load)
+// - StructureRelocator: nudges any structure off a road at build time
+//   (position/rotation only — appearance & colliders preserved)
+// These run inside World.buildDesignedCity() before/after placement.
+// ============================================================
+class RoadMask {
+    constructor(polylines) { this.segs = polylines; }
+    // distance from point to segment (x1,z1)-(x2,z2)
+    _segDist(px, pz, s) {
+        const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+        const l2 = dx * dx + dz * dz;
+        let t = l2 > 0 ? ((px - s.x1) * dx + (pz - s.z1) * dz) / l2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        const cx = s.x1 + dx * t, cz = s.z1 + dz * t;
+        return Math.hypot(px - cx, pz - cz);
+    }
+    distToRoad(px, pz) {
+        let best = Infinity;
+        for (let i = 0; i < this.segs.length; i++) {
+            const s = this.segs[i];
+            // quick AABB reject (+ half width) before exact distance
+            const hw = s.width / 2 + 2;
+            const minX = Math.min(s.x1, s.x2) - hw, maxX = Math.max(s.x1, s.x2) + hw;
+            const minZ = Math.min(s.z1, s.z2) - hw, maxZ = Math.max(s.z1, s.z2) + hw;
+            if (px < minX || px > maxX || pz < minZ || pz > maxZ) continue;
+            const d = this._segDist(px, pz, s) - s.width / 2;
+            if (d < best) best = d;
+        }
+        return best;
+    }
+    // is a footprint (radius r) fully clear of road surface + shoulder margin?
+    isClear(px, pz, r) { return this.distToRoad(px, pz) >= r; }
+    // find nearest valid position for a structure of footprint radius r
+    relocate(x, z, r, rng) {
+        if (this.isClear(x, z, r)) return null; // already fine — keep it
+        const angles = 12;
+        for (let ring = 1; ring <= 8; ring++) {
+            const step = r * 0.9;
+            for (let a = 0; a < angles; a++) {
+                const ang = (a / angles) * Math.PI * 2 + rng.next() * 0.4;
+                const nx = x + Math.cos(ang) * step * ring;
+                const nz = z + Math.sin(ang) * step * ring;
+                if (Math.abs(nx) > 1090 || Math.abs(nz) > 1090) continue;
+                if (this.isClear(nx, nz, r)) return { x: nx, z: nz };
+            }
+        }
+        return null;
+    }
+}
+
+class DensityRng {
+    constructor(seed) { this.s = seed | 0; }
+    next() {
+        this.s = (this.s + 0x6D2B79F5) | 0;
+        let t = Math.imul(this.s ^ (this.s >>> 15), 1 | this.s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+    range(a, b) { return a + (b - a) * this.next(); }
+    int(a, b) { return Math.floor(this.range(a, b + 1)); }
+    pick(arr) { return arr[Math.floor(this.next() * arr.length)]; }
+}
 
 // ============================================================
 // PLAYER STATES
@@ -717,12 +938,16 @@ class InputManager {
 
         // PC Controls
         window.addEventListener('keydown', (e) => {
+            if (e.code === 'Tab') { e.preventDefault(); }
             this.keys[e.code] = true;
-            e.preventDefault();
+            if (!this._keyCBs) return;
+            for (const cb of this._keyCBs) { try { cb(e); } catch (err) { /* noop */ } }
         });
         window.addEventListener('keyup', (e) => {
+            if (e.code === 'Tab') { e.preventDefault(); }
             this.keys[e.code] = false;
-            e.preventDefault();
+            if (!this._keyCBs) return;
+            for (const cb of this._keyCBs) { try { cb(e); } catch (err) { /* noop */ } }
         });
 
         document.addEventListener('pointerlockchange', () => {
@@ -1092,6 +1317,12 @@ class InputManager {
 
     get yawRight() {
         return this.keys['KeyE'];
+    }
+
+    // Register extra key listeners (weapon wheel, map/GPS, ...)
+    addKeyListener(cb) {
+        if (!this._keyCBs) this._keyCBs = [];
+        this._keyCBs.push(cb);
     }
 }
 
@@ -2502,10 +2733,11 @@ class WorldSystems {
         this.pedestrians = [];
         this.traffic = [];
         this.police = [];
-        this.PED_COUNT = 14;
+        this.PED_COUNT = CONFIG.npcCount;   // 130 — full visible population (was 14)
         this.TRAFFIC_COUNT = 10;
         this.MAX_POLICE = 4;
         this.updateTimer = 0;
+        this.frameNo = 0;
 
         for (let i = 0; i < this.PED_COUNT; i++) {
             const p = new Pedestrian(this.scene, this.world, i);
@@ -2526,6 +2758,25 @@ class WorldSystems {
     respawnPed(ped) {
         const pp = this.game.playerWorldPos || new THREE.Vector3();
         ped.respawnNear(pp);
+        // POPULATION SPREAD (ADD): deterministic per-NPC home zone so the
+        // 130+ pedestrians distribute across downtown, residential rings,
+        // suburbs and outskirts instead of clustering near the player.
+        if (!ped._spreadDone && this.world._roadPolylines && this.world._roadPolylines.length) {
+            ped._spreadDone = true;
+            const roads = this.world._roadPolylines;
+            for (let i = 0; i < 24; i++) {
+                const seg = roads[(ped.index * 7 + i * 13) % roads.length];
+                const t = ((ped.index * 37 + i * 61) % 97) / 97;
+                const x = seg.x1 + (seg.x2 - seg.x1) * t;
+                const z = seg.z1 + (seg.z2 - seg.z1) * t;
+                const off = (seg.width / 2) + 1.5 + ((ped.index + i) % 3);
+                const ox = x - (seg.z2 - seg.z1) * off, oz = z + (seg.x2 - seg.x1) * off;
+                const l = Math.hypot(ox - x, oz - z) || 1;
+                const px = x + (ox - x) / l * off, pz = z + (oz - z) / l * off;
+                const d = Math.hypot(px - pp.x, pz - pp.z);
+                if (d > 30 && d < 200) { ped.spawnAt(px, pz); break; }
+            }
+        }
     }
 
     spawnPoliceCar() {
@@ -2553,16 +2804,21 @@ class WorldSystems {
         const pp = game.playerWorldPos;
 
         // --- Pedestrians (only simulate near player) ---
+        // PERF: with 130+ NPCs, respawn a few per frame instead of all at once,
+        // and stagger mid-distance updates into buckets to keep CPU cost low.
+        this._respawnBudget = 4;
         for (const ped of this.pedestrians) {
             const d = Math.hypot(ped.position.x - pp.x, ped.position.z - pp.z);
             if (ped.state === 'DEAD') {
-                if (ped.deadTimer > 20 || d > 220) this.respawnPed(ped);
-                else ped.update(deltaTime, pp, false);
+                if ((ped.deadTimer > 20 || d > 220) && this._respawnBudget-- > 0) this.respawnPed(ped);
+                else if (ped.deadTimer <= 20 && d <= 220) ped.update(deltaTime, pp, false);
                 continue;
             }
-            if (d > 220) { this.respawnPed(ped); continue; }
+            if (d > 220) { if (this._respawnBudget-- > 0) this.respawnPed(ped); continue; }
             if (d < 90) ped.update(deltaTime, pp, game.playerThreatening);
+            else if (((ped.index + this.frameNo) & 7) === 0) ped.update(deltaTime * 8, pp, false);
         }
+        this.frameNo = (this.frameNo + 1) & 1023;
 
         // --- Traffic ---
         for (const car of this.traffic) {
@@ -4509,19 +4765,23 @@ class DayNightCycle {
         this.sun.shadow.mapSize.width = 1024; // Reduced from 2048 for performance
         this.sun.shadow.mapSize.height = 1024; // Reduced from 2048 for performance
         this.sun.shadow.camera.near = 0.5;
-        this.sun.shadow.camera.far = 200; // Increased to cover larger map
-        this.sun.shadow.camera.left = -100; // Increased to cover larger map
-        this.sun.shadow.camera.right = 100; // Increased to cover larger map
-        this.sun.shadow.camera.top = 100; // Increased to cover larger map
-        this.sun.shadow.camera.bottom = -100; // Increased to cover larger map
-        this.sun.shadow.bias = -0.0005; // Reduce shadow acne
-        this.sun.shadow.camera.top = 50;
-        this.sun.shadow.camera.bottom = -50;
+        this.sun.shadow.camera.far = 200;
+        this.sun.shadow.camera.left = -100;
+        this.sun.shadow.camera.right = 100;
+        this.sun.shadow.camera.top = 100;
+        this.sun.shadow.camera.bottom = -100;
+        this.sun.shadow.bias = -0.0004;   // Reduce shadow acne
+        this.sun.shadow.normalBias = 0.05; // Prevent peter-panning / detached shadows
         this.scene.add(this.sun);
+        this.scene.add(this.sun.target);
+        this._shadowFollow = true;
 
+        // Sun disk visual is owned by World (large stylized sprite). Keep a tiny
+        // fallback mesh only if World's sprites are unavailable.
         const sunGeo = new THREE.SphereGeometry(3, 16, 16);
-        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd44, fog: false });
         this.sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        this.sunMesh.visible = false;
         this.scene.add(this.sunMesh);
 
         const moonGeo = new THREE.SphereGeometry(2, 16, 16);
@@ -4538,6 +4798,7 @@ class DayNightCycle {
         this.hemiLight = new THREE.HemisphereLight(0x88aacc, 0x445522, 0.3);
         this.scene.add(this.hemiLight);
 
+        // Cinematic sunset palette: warm key + cool violet fill + warm-green ground bounce
         this.skyColors = {
             day: new THREE.Color(0x4488cc),
             sunset: new THREE.Color(0xff8844),
@@ -4547,15 +4808,31 @@ class DayNightCycle {
 
         this._skyColor = new THREE.Color();
         this._sunColor = new THREE.Color(0xffeedd);
-        this._sunColorSunset = new THREE.Color(0xff8844);
-        this._sunColorDawn = new THREE.Color(0xffaa66);
-        this._ambientColorDay = new THREE.Color(0x88aacc);
-        this._ambientColorNight = new THREE.Color(0x334466);
+        this._sunColorDay = new THREE.Color(0xfff2d0);      // warm yellow-white key
+        this._sunColorSunset = new THREE.Color(0xff9a3c);   // deep warm orange at low sun
+        this._sunColorDawn = new THREE.Color(0xffb066);
+        this._ambientColorDay = new THREE.Color(0x7f9ec4);  // cool blue fill
+        this._ambientColorNight = new THREE.Color(0x2b3355);
+        this._hemiSkyDay = new THREE.Color(0x8fb4dd);
+        this._hemiSkySunset = new THREE.Color(0xd98a6a);    // pink-violet sky bounce
+        this._hemiGroundDay = new THREE.Color(0x556b2f);
+        this._hemiGroundSunset = new THREE.Color(0x6b4a2a); // warm brown earth response
         this._prevIsNight = false;
         this._prevTimeText = '';
+        this._fogColor = new THREE.Color();
+
+        // Sky-dome gradient palettes (day vs golden-hour)
+        this._dayTop     = new THREE.Color(0x2a63b0); // blue upper sky (day)
+        this._nightTop   = new THREE.Color(0x0b1230);
+        this._dayMid     = new THREE.Color(0x5f8fc9); // blue-violet transition (day)
+        this._sunsetMid  = new THREE.Color(0x8a5a9e); // pink/purple band
+        this._dayHorizon = new THREE.Color(0xbcd8ee); // pale horizon (day)
+        this._sunsetHorizon = new THREE.Color(0xff9a4d); // strong orange/gold horizon
 
         this.scene.fog = new THREE.Fog(0xaaccee, 100, 800);
     }
+
+    setShadowFollow(enabled) { this._shadowFollow = !!enabled; }
 
     skipTime() {
         const phases = [5, 8, 12, 17, 19, 23, 29]; // dawn, morning, noon, dusk, night-ish, midnight, next dawn(+24)
@@ -4594,11 +4871,21 @@ class DayNightCycle {
         const sunY = Math.sin(sunAngle) * 80;
         const sunZ = 20;
 
-        this.sun.position.set(sunX, Math.max(sunY, -20), sunZ);
-        this.sunMesh.position.set(sunX, sunY, sunZ);
+        // Camera-following shadow region: keeps long, crisp, stable shadows around
+        // the player instead of one giant blurry map (cascade-style thinking).
+        let camX = 0, camY = 0, camZ = 0;
+        try {
+            const g = window.__game;
+            if (g && g.camera) { camX = g.camera.position.x; camY = g.camera.position.y; camZ = g.camera.position.z; }
+        } catch (e) { /* world not ready yet */ }
 
-        this.moonMesh.position.set(-sunX, -sunY, -sunZ);
-        this.moonLight.position.set(-sunX, -sunY, -sunZ);
+        this.sun.position.set(camX + sunX, Math.max(sunY, -20) + camY, camZ + sunZ);
+        this.sun.target.position.set(camX, camY, camZ);
+        this.sun.target.updateMatrixWorld();
+        this.sunMesh.position.set(camX + sunX, sunY + camY, camZ + sunZ);
+
+        this.moonMesh.position.set(camX - sunX, -sunY + camY, camZ - sunZ);
+        this.moonLight.position.set(camX - sunX, -sunY + camY, camZ - sunZ);
 
         let dayFactor = 0;
         let sunsetFactor = 0;
@@ -4616,21 +4903,31 @@ class DayNightCycle {
             dayFactor = 0;
         }
 
-        this.sun.intensity = Math.max(0, dayFactor * 1.2);
+        // Golden-hour strength curve: warm key light stays strong while the sun is low
+        const goldenHour = Math.max(sunsetFactor, dawnFactor * 0.85);
+        this.sun.intensity = Math.max(0, 0.35 + dayFactor * 1.05) * (1 - goldenHour * 0.25);
 
+        // Warm key light color: day -> deep orange at sunset (direct blend, no drift)
         if (sunsetFactor > 0) {
-            this._sunColor.lerpColors(this._sunColor, this._sunColorSunset, sunsetFactor * 0.1);
+            this._sunColor.lerpColors(this._sunColorDay, this._sunColorSunset, sunsetFactor);
         } else if (dawnFactor > 0) {
-            this._sunColor.lerpColors(this._sunColor, this._sunColorDawn, dawnFactor * 0.1);
+            this._sunColor.lerpColors(this._sunColorDawn, this._sunColorDay, dawnFactor);
+        } else {
+            this._sunColor.copy(this._sunColorDay);
         }
         this.sun.color.copy(this._sunColor);
 
         this.moonLight.intensity = (1 - dayFactor) * 0.3;
 
-        this.ambientLight.intensity = 0.3 + dayFactor * 0.3;
+        // Cool blue/violet fill so shadows read cold against the warm key
+        this.ambientLight.intensity = 0.32 + dayFactor * 0.22 + goldenHour * 0.06;
         this.ambientLight.color.lerpColors(this._ambientColorNight, this._ambientColorDay, dayFactor);
 
-        this.hemiLight.intensity = 0.2 + dayFactor * 0.3;
+        // Hemisphere: pink-violet sky bounce + warm brown/green ground response at sunset
+        this.hemiLight.intensity = 0.25 + dayFactor * 0.30;
+        this.hemiLight.color.lerpColors(this._ambientColorNight, this._hemiSkyDay, dayFactor);
+        if (goldenHour > 0) this.hemiLight.color.lerp(this._hemiSkySunset, goldenHour * 0.7);
+        this.hemiLight.groundColor.lerpColors(this._hemiGroundDay, this._hemiGroundSunset, goldenHour);
 
         if (sunsetFactor > 0) {
             this._skyColor.lerpColors(this.skyColors.day, this.skyColors.sunset, sunsetFactor);
@@ -4641,13 +4938,43 @@ class DayNightCycle {
         } else {
             this._skyColor.copy(this.skyColors.night);
         }
+        // Sky dome shader owns the background; keep a fallback color for safety
         this.scene.background = this._skyColor;
 
-        this.scene.fog.color.copy(this._skyColor);
-        this.scene.fog.near = 100 + dayFactor * 100;
-        this.scene.fog.far = 500 + dayFactor * 300;
+        // Atmospheric perspective: fog tinted toward horizon glow, deeper reach at sunset
+        this._fogColor.copy(this._skyColor);
+        if (goldenHour > 0) this._fogColor.lerp(this.skyColors.sunset, goldenHour * 0.45);
+        this.scene.fog.color.copy(this._fogColor);
+        this.scene.fog.near = 120 + dayFactor * 120;
+        this.scene.fog.far = 620 + dayFactor * 280 + goldenHour * 150;
 
-        this.sunMesh.visible = sunY > -10;
+        // Drive the stylized sky dome + sun sprites (owned by World)
+        const w = (window.__game && window.__game.world) || null;
+        if (w && w.skyMaterial) {
+            const u = w.skyMaterial.uniforms;
+            u.uSunDir.value.set(sunX, Math.max(sunY, -6), sunZ).normalize();
+            u.uSunsetMix.value = Math.min(1, goldenHour * 1.2);
+            u.uNightMix.value = Math.max(0, 1 - dayFactor * 1.6);
+            u.uHorizon.value.lerpColors(this._dayHorizon, this._sunsetHorizon, goldenHour);
+            u.uMid.value.lerpColors(this._dayMid, this._sunsetMid, goldenHour);
+            u.uTop.value.lerpColors(this._dayTop, this._nightTop, Math.max(0, 1 - dayFactor));
+        }
+        if (w && w.sunDiscSprite) {
+            w.sunDiscSprite.position.set(camX + sunX * 8, sunY * 8 + camY, camZ + sunZ * 8);
+            w.sunDiscSprite.visible = sunY > -12;
+            w.sunDiscSprite.material.opacity = 0.55 + goldenHour * 0.45;
+            const s = 55 + goldenHour * 35;
+            w.sunDiscSprite.scale.set(s, s, 1);
+            if (w.sunHaloSprite) {
+                w.sunHaloSprite.position.copy(w.sunDiscSprite.position);
+                w.sunHaloSprite.visible = sunY > -20;
+                const hs = 140 + goldenHour * 80;
+                w.sunHaloSprite.scale.set(hs, hs, 1);
+                w.sunHaloSprite.material.opacity = 0.2 + goldenHour * 0.3;
+            }
+        }
+
+        this.sunMesh.visible = false; // World's sprite sun replaces it
         this.moonMesh.visible = sunY < 10;
 
         const isNight = dayFactor < 0.3;
@@ -4655,6 +4982,7 @@ class DayNightCycle {
         return {
             isNight: isNight,
             dayFactor: dayFactor,
+            sunsetFactor: goldenHour,
         };
     }
 }
@@ -5193,6 +5521,15 @@ class World {
     }
 
     _placeGroup(group, x, z, rotY, colW, colH, colD) {
+        // ROAD-SAFE PLACEMENT (FIX): if this structure's footprint overlaps a
+        // road + shoulder clearance, MOVE it to the nearest valid position.
+        // Appearance/geometry/material/collider size are preserved exactly —
+        // only x/z change. Deterministic (seeded), same result every load.
+        if (this._roadMask && colW > 0) {
+            const footprint = Math.max(colW, colD) * 0.5 + 2.5; // road + shoulder + safety margin
+            const spot = this._roadMask.relocate(x, z, footprint, this._densityRng);
+            if (spot) { x = spot.x; z = spot.z; this._structuresMoved++; }
+        }
         const gy = this.getGroundHeight(x, z);
         group.position.set(x, gy, z);
         group.rotation.y = rotY || 0;
@@ -5227,12 +5564,361 @@ class World {
             polygonOffsetUnits: -2
         });
 
+        // --- Layer order matters: roads first, then blocks/districts/landmarks,
+        //     then infrastructure & decoration on top of the finished skeleton. ---
+        this._seedRng = 20261115; // deterministic — identical city every load
         this.placeDesignedRoads();
+        this.placeExtendedRoadNetwork();
         this.placeLandmarkBuildings();
         this.placeDesignedBlocks();
         this.placeSuburbanHouses();
+        this.placeDistricts();          // university, old town, gov center, business, commercial strips
+        this.placeIndustrialExtra();
+        this.placeWaterfrontHarbor();
+        this.placePublicSpaces();       // parks, plazas, playgrounds, sports fields, cemetery
+        this.placeCountryside();
         this.placeParkTrees();
         this.placeRoadLights();
+        this.placeSidewalksCurbsCrosswalks();
+        this.placeRoundabouts();
+        this.placeBridgesOverpasses();
+        this.placeTrafficSignals();
+        this.placeRoadSigns();
+        this.placeAlleysDrivewaysFences();
+        this.placeParkingAndLots();
+        this.placeStreetFurniture();
+        this.placeUtilityInfrastructure();
+        this.placeBillboardsVending();
+        this.placeParkedVehicles();
+        this.placeConstructionSites();
+        this.placeOutskirtsForest();
+
+        // --- World density pass (ADD-ONLY): road mask is built AFTER all road
+        //     segments exist, so structure relocation + prop/grass placement
+        //     use the complete, authoritative road network. Deterministic. ---
+        this._roadMask = new RoadMask(this._roadPolylines);
+        this._densityRng = new DensityRng(90210);
+        this._structuresMoved = 0;
+        this.relocateStructuresOffRoads();
+        this.placeDensityProps();
+        this.placeDensityGrass();
+    }
+
+    // ============================================================
+    // ROAD-SAFE STRUCTURE CORRECTION
+    // Walk every existing box collider that belongs to a *structure*
+    // (buildings/houses/sheds/barns — i.e. footprint >= 4m) and, if it
+    // overlaps the road clearance zone, slide BOTH the visual group and
+    // its collider to the nearest valid position. Identity preserved.
+    // ============================================================
+    relocateStructuresOffRoads() {
+        const mask = this._roadMask, rng = this._densityRng;
+        for (const c of this.collisionSystem.colliders) {
+            if (!c || c.type !== 'box') continue;
+            const w = c.width || 0, d = c.depth || 0;
+            if (w < 4 || d < 4) continue;               // small props keep their spot
+            const r = Math.max(w, d) * 0.5 + 2.5;       // footprint + shoulder + safety
+            let x = c.position.x, z = c.position.z;
+            if (mask.isClear(x, z, r)) continue;         // already valid — do not touch
+            const spot = mask.relocate(x, z, r, rng);
+            if (!spot) continue;
+            const dx = spot.x - x, dz = spot.z - z;
+            c.position.set(spot.x, c.position.y, spot.z);
+            // keep the collision spatial grid in sync with the moved collider
+            if (typeof this.collisionSystem._removeFromGrid === 'function') {
+                this.collisionSystem._removeFromGrid(c);
+                this.collisionSystem._addToGrid(c);
+            } else if (this.collisionSystem.spatialGrid instanceof Map) {
+                for (const arr of this.collisionSystem.spatialGrid.values()) {
+                    const idx = arr.indexOf(c);
+                    if (idx !== -1) arr.splice(idx, 1);
+                }
+                this.collisionSystem._addToGrid(c);
+            }
+            // move the matching visual object(s) sitting at the old position.
+            // NOTE: colliders are stored as plain data objects (no .isObject3D),
+            // so they can never be matched here — only real scene nodes move.
+            for (const obj of this.scene.children) {
+                if (!obj || !obj.isObject3D || obj.isTerrain) continue;
+                if (Math.abs(obj.position.x - x) < 0.01 && Math.abs(obj.position.z - z) < 0.01 &&
+                    obj.position.y > -1) {
+                    obj.position.x += dx; obj.position.z += dz;
+                }
+            }
+            // minimap entry too
+            for (const lm of this._minimapLandmarks) {
+                if (Math.abs(lm.x - x) < 0.01 && Math.abs(lm.z - z) < 0.01) { lm.x = spot.x; lm.z = spot.z; }
+            }
+            this._structuresMoved++;
+        }
+    }
+
+    // ============================================================
+    // 500+ ENVIRONMENTAL PROPS — deterministic, grouped, instanced
+    // Each prop type = ONE InstancedMesh (shared geometry + material),
+    // so ~20 draw calls cover hundreds of placed objects.
+    // Placement rules: roadside strips follow road polylines with safe
+    // clearance; rural/city/natural props form believable clusters.
+    // ============================================================
+    placeDensityProps() {
+        const mask = this._roadMask, rng = this._densityRng;
+        const MAXR = 1060;
+        this._propCount = 0;
+
+        const addInst = (geo, mat, transforms, shadows) => {
+            if (!transforms.length) return null;
+            const im = new THREE.InstancedMesh(geo, mat, transforms.length);
+            const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(),
+                  e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+            for (let i = 0; i < transforms.length; i++) {
+                const t = transforms[i];
+                p.set(t[0], t[1], t[2]);
+                e.set(0, t[3] || 0, 0); q.setFromEuler(e);
+                s.set(t[4] || 1, t[5] || 1, t[6] || 1);
+                m4.compose(p, q, s);
+                im.setMatrixAt(i, m4);
+            }
+            im.instanceMatrix.needsUpdate = true;
+            im.castShadow = !!shadows; im.receiveShadow = false;
+            im.frustumCulled = true;
+            this.scene.add(im);
+            this._propCount += transforms.length;
+            return im;
+        };
+
+        const lambert = (hex) => new THREE.MeshLambertMaterial({ color: hex, flatShading: true });
+
+        // ---- shared geometries (created once) ----
+        const gRock   = new THREE.IcosahedronGeometry(0.55, 0);
+        const gStone  = new THREE.DodecahedronGeometry(0.28, 0);
+        const gLog    = new THREE.CylinderGeometry(0.16, 0.2, 1.8, 6);
+        const gStump  = new THREE.CylinderGeometry(0.34, 0.42, 0.5, 7);
+        const gBush   = new THREE.IcosahedronGeometry(0.6, 0);
+        const gPost   = new THREE.CylinderGeometry(0.06, 0.07, 1.5, 5);
+        const gBarrel = new THREE.CylinderGeometry(0.32, 0.32, 0.9, 8);
+        const gCrate  = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+        const gBin    = new THREE.BoxGeometry(0.55, 0.9, 0.55);
+        const gBench  = new THREE.BoxGeometry(1.8, 0.12, 0.5);
+        const gSignSm = new THREE.BoxGeometry(0.9, 0.6, 0.06);
+        const gMarker = new THREE.BoxGeometry(0.12, 0.7, 0.12);
+        const gTank   = new THREE.CylinderGeometry(1.1, 1.1, 1.6, 8);
+        const gHay    = new THREE.CylinderGeometry(0.7, 0.7, 1.1, 8);
+        const gFlower = new THREE.IcosahedronGeometry(0.14, 0);
+        const gMail   = new THREE.BoxGeometry(0.35, 0.5, 0.25);
+        const gKerb   = new THREE.BoxGeometry(1.2, 0.16, 0.16);
+
+        const mRock  = lambert(0x8a8f7e), mStone = lambert(0x9aa08c);
+        const mWood  = lambert(0x6e4a2f), mWoodLt = lambert(0x8b6a45);
+        const mLeafA = lambert(0x4e7d3a), mLeafB = lambert(0x6b8f3f);
+        const mMetal = lambert(0x77808a), mBlue  = lambert(0x3a6ea5);
+        const mGreen = lambert(0x2e7d4f), mRed   = lambert(0xb03a2e);
+        const mYellow= lambert(0xd9a520), mGrey  = lambert(0x666b70);
+        const mWhite = lambert(0xd8d8cf), mStraw = lambert(0xc2a35a);
+        const mPink  = lambert(0xd98bb0), mGold  = lambert(0xe3c14f);
+
+        const T = { rock:[], stone:[], log:[], stump:[], bushA:[], bushB:[], post:[], barrel:[],
+                    crate:[], bin:[], bench:[], signSm:[], marker:[], tank:[], hay:[], flowerR:[],
+                    flowerY:[], flowerP:[], mail:[], kerb:[] };
+
+        const inBounds = (x, z) => Math.abs(x) < MAXR && Math.abs(z) < MAXR;
+        const nearWater = (x, z) => (z > 150 && z < 200 && x > 40); // harbor/river band used by existing waterfront
+        const put = (arr, x, z, y, rot, sy) => arr.push([x, y == null ? 0 : y, z, rot || 0, 1, sy || 1, 1]);
+
+        // ---- A. ROADSIDE STRIPS: poles → signs → markers → rocks → bushes ----
+        // Walk each road polyline and lay props along both sides at safe offsets.
+        for (const s of this._roadPolylines) {
+            const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+            const len = Math.hypot(dx, dz);
+            if (len < 20) continue;
+            const ux = dx / len, uz = dz / len;
+            const off = s.width / 2 + 2.2;             // clear of drivable surface
+            const spacing = 26 + rng.next() * 10;
+            for (let t = 4; t < len - 4; t += spacing) {
+                const bx = s.x1 + ux * t, bz = s.z1 + uz * t;
+                for (const side of [1, -1]) {
+                    if (rng.next() < 0.35) continue;    // natural gaps
+                    const px = bx - uz * off * side, pz = bz + ux * off * side;
+                    if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.5)) continue;
+                    const roll = rng.next();
+                    if (roll < 0.22)      put(T.post,   px, pz, 0.75, 0, 1);          // utility/telephone pole
+                    else if (roll < 0.34) put(T.signSm, px, pz, 1.6, Math.atan2(-uz, ux) + Math.PI / 2, 1); // road sign
+                    else if (roll < 0.48) put(T.marker, px, pz, 0.35, 0, 1);          // roadside marker
+                    else if (roll < 0.62) put(T.kerb,   px, pz, 0.08, Math.atan2(-dz, dx), 1); // edge stone
+                    else if (roll < 0.76) put(T.bushA,  px, pz, 0.35, rng.range(0, 6.28), rng.range(0.8, 1.3));
+                    else if (roll < 0.88) put(T.rock,   px, pz, 0.25, rng.range(0, 6.28), rng.range(0.6, 1.2));
+                    else                  put(T.stone,  px, pz, 0.12, rng.range(0, 6.28), 1);
+                }
+            }
+        }
+
+        // ---- B. FENCE LINES along suburban/residential blocks ----
+        const fenceRuns = [
+            [-220, -140, -140, -140], [-220, -140, -220, -60], [140, -140, 220, -140],
+            [220, -140, 220, -60], [-60, 140, 60, 160], [160, 40, 240, 40],
+            [-260, 40, -160, 40], [-260, 40, -260, 120], [60, -220, 160, -220],
+            [-160, -220, -60, -220], [260, -60, 260, 60], [-60, 220, 80, 240],
+        ];
+        for (const [x1, z1, x2, z2] of fenceRuns) {
+            const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz);
+            const n = Math.floor(len / 2.4);
+            for (let i = 0; i <= n; i++) {
+                const px = x1 + dx * (i / n), pz = z1 + dz * (i / n);
+                if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.6)) continue;
+                put(T.post, px, pz, 0.7, 0, 1);
+                if (i % 6 === 0 && rng.next() < 0.5) put(T.stump, px + 1.2, pz + 0.8, 0.25, 0, 1);
+            }
+        }
+
+        // ---- C. RURAL CLUSTERS: farm yards (barrels, crates, hay, tanks) ----
+        const farmSpots = [[-320, -260], [340, -230], [-380, 240], [360, 300],
+                           [-180, 320], [220, -320], [-420, -120], [430, 120],
+                           [-300, -330], [300, 350]];
+        for (const [fx, fz] of farmSpots) {
+            if (!mask.isClear(fx, fz, 8)) continue;
+            const count = 10 + rng.int(0, 6);
+            for (let i = 0; i < count; i++) {
+                const px = fx + rng.range(-9, 9), pz = fz + rng.range(-9, 9);
+                if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.6)) continue;
+                const roll = rng.next();
+                if (roll < 0.2)       put(T.barrel, px, pz, 0.45, rng.range(0, 6.28), 1);
+                else if (roll < 0.4)  put(T.crate,  px, pz, 0.35, rng.range(0, 1.2), 1);
+                else if (roll < 0.58) put(T.hay,    px, pz, 0.55, rng.range(0, 6.28), 1);
+                else if (roll < 0.68) put(T.tank,   px, pz, 0.9, 0, 1);
+                else if (roll < 0.8)  put(T.log,    px, pz, 0.2, rng.range(0, 6.28), 1);
+                else if (roll < 0.9)  put(T.mail,   px, pz, 0.3, 0, 1);
+                else                  put(T.stone,  px, pz, 0.12, 0, 1);
+            }
+            // ring a few bushes/trees around each yard
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2 + rng.next();
+                const px = fx + Math.cos(a) * 14, pz = fz + Math.sin(a) * 14;
+                if (inBounds(px, pz) && mask.isClear(px, pz, 0.8))
+                    put(rng.next() < 0.5 ? T.bushA : T.bushB, px, pz, 0.35, a, rng.range(0.9, 1.5));
+            }
+        }
+
+        // ---- D. CITY OUTSKIRTS / SIDEWALK LIFE: bins, benches, flowers, mailboxes ----
+        const citySpots = [[0, 0], [-100, -100], [100, -100], [100, 100], [-100, 100],
+                           [-200, -80], [200, -80], [-200, 80], [160, 80], [0, -180], [0, 180]];
+        for (const [cx, cz] of citySpots) {
+            const count = 14 + rng.int(0, 8);
+            for (let i = 0; i < count; i++) {
+                const px = cx + rng.range(-34, 34), pz = cz + rng.range(-34, 34);
+                if (!inBounds(px, pz) || !mask.isClear(px, pz, 0.7)) continue;
+                const roll = rng.next();
+                if (roll < 0.2)       put(T.bin,    px, pz, 0.45, rng.range(0, 1), 1);
+                else if (roll < 0.32) put(T.bench,  px, pz, 0.45, rng.range(0, 6.28), 1);
+                else if (roll < 0.5)  put(T.flowerR,px, pz, 0.18, 0, 1);
+                else if (roll < 0.64) put(T.flowerY,px, pz, 0.18, 0, 1);
+                else if (roll < 0.74) put(T.flowerP,px, pz, 0.18, 0, 1);
+                else if (roll < 0.84) put(T.mail,   px, pz, 0.3, rng.range(0, 6.28), 1);
+                else if (roll < 0.92) put(T.stone,  px, pz, 0.12, 0, 1);
+                else                  put(T.bushB,  px, pz, 0.3, 0, rng.range(0.7, 1.1));
+            }
+        }
+
+        // ---- E. NATURAL SCATTER: rocks/logs/stumps/bushes through countryside ----
+        const natSeeds = [[-500, -400], [500, -420], [-520, 350], [520, 420],
+                          [-450, 60], [470, -60], [0, -450], [-250, 450], [250, 450], [0, 420]];
+        for (const [nx0, nz0] of natSeeds) {
+            const count = 26 + rng.int(0, 10);
+            for (let i = 0; i < count; i++) {
+                const px = nx0 + rng.range(-70, 70), pz = nz0 + rng.range(-70, 70);
+                if (!inBounds(px, pz) || nearWater(px, pz)) continue;
+                if (!mask.isClear(px, pz, 0.8)) continue;
+                const roll = rng.next();
+                if (roll < 0.3)       put(T.rock,   px, pz, 0.22, rng.range(0, 6.28), rng.range(0.6, 1.6));
+                else if (roll < 0.45) put(T.stone,  px, pz, 0.12, rng.range(0, 6.28), rng.range(0.8, 1.4));
+                else if (roll < 0.6)  put(T.bushA,  px, pz, 0.32, rng.range(0, 6.28), rng.range(0.8, 1.6));
+                else if (roll < 0.72) put(T.bushB,  px, pz, 0.32, rng.range(0, 6.28), rng.range(0.8, 1.6));
+                else if (roll < 0.82) put(T.log,    px, pz, 0.18, rng.range(0, 6.28), 1);
+                else if (roll < 0.9)  put(T.stump,  px, pz, 0.25, rng.range(0, 6.28), rng.range(0.8, 1.3));
+                else                  put(T.flowerY,px, pz, 0.16, 0, 1);
+            }
+        }
+
+        // ---- commit instances ----
+        addInst(gRock,   mRock,   T.rock);
+        addInst(gStone,  mStone,  T.stone);
+        addInst(gLog,    mWood,   T.log);
+        addInst(gStump,  mWoodLt, T.stump);
+        addInst(gBush,   mLeafA,  T.bushA);
+        addInst(gBush,   mLeafB,  T.bushB);
+        addInst(gPost,   mWood,   T.post, true);
+        addInst(gBarrel, mBlue,   T.barrel);
+        addInst(gCrate,  mWoodLt, T.crate);
+        addInst(gBin,    mGreen,  T.bin);
+        addInst(gBench,  mWood,   T.bench);
+        addInst(gSignSm, mMetal,  T.signSm, true);
+        addInst(gMarker, mWhite,  T.marker);
+        addInst(gTank,   mGrey,   T.tank, true);
+        addInst(gHay,    mStraw,  T.hay);
+        addInst(gFlower, mRed,    T.flowerR);
+        addInst(gFlower, mGold,   T.flowerY);
+        addInst(gFlower, mPink,   T.flowerP);
+        addInst(gMail,   mRed,    T.mail);
+        addInst(gKerb,   mStone,  T.kerb);
+    }
+
+    // ============================================================
+    // DENSE STYLIZED GRASS — 2 InstancedMeshes (blades + clumps).
+    // Distance-aware chunking: denser near town core & field bands,
+    // always excluded from roads/sidewalks via the road mask.
+    // ============================================================
+    placeDensityGrass() {
+        const mask = this._roadMask, rng = this._densityRng;
+        const bladeGeo = new THREE.ConeGeometry(0.055, 0.55, 3, 1, true);
+        bladeGeo.translate(0, 0.275, 0);
+        const clumpGeo = new THREE.IcosahedronGeometry(0.32, 0);
+        clumpGeo.scale(1.15, 0.75, 1.15);
+        const bladeMat = new THREE.MeshLambertMaterial({ color: 0x67923f, flatShading: true, side: THREE.DoubleSide });
+        const clumpMat = new THREE.MeshLambertMaterial({ color: 0x7ba24e, flatShading: true });
+
+        const fill = (count, minRoadDist) => {
+            const list = [];
+            let guard = 0;
+            while (list.length < count && guard++ < count * 6) {
+                const x = rng.range(-1050, 1050), z = rng.range(-1050, 1050);
+                if (mask.distToRoad(x, z) < minRoadDist) continue;
+                const gy = this.getGroundHeight(x, z);
+                if (gy < 0.02) continue; // skip water
+                list.push([x, gy, z, rng.range(0, 6.28), rng.range(0.7, 1.6), rng.range(0.8, 1.8), rng.range(0.7, 1.6)]);
+            }
+            return list;
+        };
+
+        const build = (geo, mat, list, castShadow) => {
+            if (!list.length) return;
+            const im = new THREE.InstancedMesh(geo, mat, list.length);
+            const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(),
+                  e = new THREE.Euler(), s = new THREE.Vector3(), p = new THREE.Vector3();
+            const col = new THREE.Color();
+            for (let i = 0; i < list.length; i++) {
+                const t = list[i];
+                p.set(t[0], t[1], t[2]); e.set(0, t[3], 0); q.setFromEuler(e);
+                s.set(t[4], t[5], t[6]); m4.compose(p, q, s);
+                im.setMatrixAt(i, m4);
+                // subtle per-instance green→olive variation
+                col.setHSL(0.26 + (t[3] % 1) * 0.06, 0.45, 0.3 + (t[4] % 1) * 0.14);
+                im.setColorAt(i, col);
+            }
+            im.instanceMatrix.needsUpdate = true;
+            if (im.instanceColor) im.instanceColor.needsUpdate = true;
+            im.castShadow = castShadow; im.receiveShadow = false;
+            this.scene.add(im);
+        };
+
+        build(bladeGeo, bladeMat, fill(CONFIG.grassBlades, 1.6), false);
+        build(clumpGeo, clumpMat, fill(CONFIG.grassClumps, 2.0), false);
+    }
+
+    // Deterministic PRNG for minor decoration only (core layout is hand-placed)
+    _rand() {
+        this._seedRng |= 0;
+        this._seedRng = (this._seedRng + 0x6D2B79F5) | 0;
+        let t = Math.imul(this._seedRng ^ (this._seedRng >>> 15), 1 | this._seedRng);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
 
     addRoadSeg(x1, z1, x2, z2, width) {
@@ -5371,6 +6057,343 @@ class World {
             this.scene.add(line);
         }
         this._minimapLandmarks.push({ x, z, c: "#555555" });
+    }
+
+    // ============================================================
+    // EXTENDED ROAD NETWORK — secondary streets, one-ways, alleys,
+    // dead-end courts and driveways. All hand-placed coordinates.
+    // ============================================================
+    _sidewalkStrip(x1, z1, x2, z2, offset, width) {
+        const dx = x2 - x1, dz = z2 - z1;
+        const len = Math.hypot(dx, dz);
+        if (len < 0.5) return;
+        const px = -dz / len, pz = dx / len; // perpendicular
+        const cx = (x1 + x2) / 2 + px * offset;
+        const cz = (z1 + z2) / 2 + pz * offset;
+        const angle = Math.atan2(dz, dx);
+        const sw = new THREE.Mesh(new THREE.BoxGeometry(len, 0.12, width), this._mat(0xB9B4A8));
+        sw.position.set(cx, 0.06, cz);
+        sw.rotation.y = -angle;
+        sw.receiveShadow = true;
+        this.scene.add(sw);
+        // curb face (slightly darker edge toward road)
+        const curb = new THREE.Mesh(new THREE.BoxGeometry(len, 0.14, 0.25), this._mat(0x8F8A7E));
+        curb.position.set((x1 + x2) / 2 + px * (offset - Math.sign(offset) * (width / 2)), 0.07, (z1 + z2) / 2 + pz * (offset - Math.sign(offset) * (width / 2)));
+        curb.rotation.y = -angle;
+        this.scene.add(curb);
+    }
+
+    placeExtendedRoadNetwork() {
+        const ST = 8, LN = 7, AV = 14;
+        // --- Downtown south grid (dense local streets) ---
+        this.addRoadSeg(-100, -140, 100, -140, ST);
+        this.addRoadSeg(-100, -180, 100, -180, ST);
+        this.addRoadSeg(-40, -200, -40, -100, ST);
+        this.addRoadSeg(40, -200, 40, -100, ST);
+        this.addRoadSeg(-100, -180, -100, -220, ST);   // link to west connector
+        this.addRoadSeg(100, -180, 160, -180, LN);     // east spur to commercial strip
+        // --- West old-town fine grid ---
+        this.addRoadSeg(-220, -160, -120, -160, LN);
+        this.addRoadSeg(-220, -120, -120, -120, LN);
+        this.addRoadSeg(-160, -200, -160, -100, LN);
+        this.addRoadSeg(-200, -200, -200, -100, LN);
+        this.addRoadSeg(-120, -200, -120, -100, LN);
+        // --- University campus loop (SW quadrant) ---
+        this.addPolyRoad([[-260, 120], [-260, 250], [-140, 260], [-120, 200], [-160, 140], [-220, 120], [-260, 120]], LN);
+        this.addRoadSeg(-220, 120, -220, 200, LN);      // campus cross road
+        this.addRoadSeg(-260, 185, -160, 190, LN);      // campus mall walk (also used as plaza)
+        this.addRoadSeg(-160, 140, -100, 150, LN);      // connects campus to stadium box
+        // --- North park loop road ---
+        this.addPolyRoad([[120, 240], [180, 235], [230, 210], [250, 170]], LN);
+        // --- East waterfront promenade (one-way northbound) ---
+        this.addRoadSeg(246, 20, 246, 240, ST);
+        this._oneWay = (this._oneWay || []);
+        this._oneWay.push({ x1: 246, z1: 20, x2: 246, z2: 240, dir: 1 });
+        // --- One-way pair through commercial strip (parallel service roads) ---
+        this.addRoadSeg(120, -124, 220, -124, LN);      // eastbound
+        this.addRoadSeg(120, -112, 220, -112, LN);      // westbound
+        this._oneWay.push({ x1: 120, z1: -124, x2: 220, z2: -124, dir: 1 });
+        this._oneWay.push({ x1: 220, z1: -112, x2: 120, z2: -112, dir: -1 });
+        // --- Dead-end cul-de-sacs (suburbs) ---
+        const courts = [
+            [[-240, -60], [-268, -60]], [[-240, -95], [-268, -95]],
+            [[-120, -240], [-120, -266]], [[-60, -232], [-60, -258]],
+            [[180, -120], [206, -120]], [[180, -150], [206, -150]],
+            [[-240, 60], [-266, 60]], [[-240, 95], [-266, 95]]
+        ];
+        for (const c of courts) {
+            this.addRoadSeg(c[0][0], c[0][1], c[1][0], c[1][1], 6);
+            // cul-de-sac bulb
+            const bulb = new THREE.Mesh(new THREE.CircleGeometry(4.5, 10), this.roadMat);
+            bulb.rotation.x = -Math.PI / 2;
+            bulb.position.set(c[1][0] + Math.sign(c[1][0] - c[0][0]) * 3 || c[1][0], 0.052, c[1][1] + (c[1][1] === c[0][1] ? 0 : Math.sign(c[1][1] - c[0][1]) * 3));
+            if (Math.abs(c[1][0] - c[0][0]) > Math.abs(c[1][1] - c[0][1])) bulb.position.x += Math.sign(c[1][0] - c[0][0]) * 2.5;
+            else bulb.position.z += Math.sign(c[1][1] - c[0][1]) * 2.5;
+            this.scene.add(bulb);
+        }
+        // --- Alleys behind downtown storefronts (thin paved strips) ---
+        const alleys = [
+            [[-96, -20], [-12, -20]], [[-96, 20], [-12, 20]],
+            [[12, -20], [96, -20]], [[12, 20], [96, 20]],
+            [[-20, -96], [-20, -12]], [[20, -96], [20, -12]],
+            [[-20, 12], [-20, 96]], [[20, 12], [20, 96]]
+        ];
+        this._alleys = [];
+        for (const a of alleys) {
+            this.addRoadSeg(a[0][0], a[0][1], a[1][0], a[1][1], 4);
+            this._alleys.push({ x1: a[0][0], z1: a[0][1], x2: a[1][0], z2: a[1][1] });
+        }
+    }
+
+    // Sidewalks + curbs along every designed road, crosswalks at junctions
+    placeSidewalksCurbsCrosswalks() {
+        const roads = this._roadPolylines;
+        for (const s of roads) {
+            if (s.width <= 4) continue; // alleys get no sidewalks
+            const off = s.width / 2 + 1.4;
+            this._sidewalkStrip(s.x1, s.z1, s.x2, s.z2, off, 2.2);
+            this._sidewalkStrip(s.x1, s.z1, s.x2, s.z2, -off, 2.2);
+        }
+        // Crosswalks at key intersections (zebra bars across each approach)
+        const crossings = [
+            [0, 0], [0, -80], [0, 80], [0, -140], [0, -180], [-40, -140], [40, -140],
+            [-80, 0], [80, 0], [-100, -100], [100, -100], [-100, 100], [100, 100],
+            [-80, 150], [80, 150], [-80, 230], [80, 230], [0, 150], [160, 80], [200, 20],
+            [-160, 200], [-220, 120], [120, -118], [-160, -160], [-200, -160]
+        ];
+        for (const [cx, cz] of crossings) this._crosswalk(cx, cz, 7);
+    }
+
+    _crosswalk(cx, cz, halfW) {
+        const y = 0.065;
+        for (let i = 0; i < 5; i++) {
+            const t = -halfW + (i + 0.5) * (halfW * 2 / 5);
+            let bar;
+            bar = new THREE.Mesh(new THREE.PlaneGeometry(0.55, halfW * 2), this.markingMat);
+            bar.rotation.x = -Math.PI / 2;
+            bar.position.set(cx + t, y, cz - halfW - 1.2);
+            this.scene.add(bar);
+            bar = new THREE.Mesh(new THREE.PlaneGeometry(0.55, halfW * 2), this.markingMat);
+            bar.rotation.x = -Math.PI / 2;
+            bar.position.set(cx + t, y, cz + halfW + 1.2);
+            this.scene.add(bar);
+            bar = new THREE.Mesh(new THREE.PlaneGeometry(halfW * 2, 0.55), this.markingMat);
+            bar.rotation.x = -Math.PI / 2;
+            bar.position.set(cx - halfW - 1.2, y, cz + t);
+            this.scene.add(bar);
+            bar = new THREE.Mesh(new THREE.PlaneGeometry(halfW * 2, 0.55), this.markingMat);
+            bar.rotation.x = -Math.PI / 2;
+            bar.position.set(cx + halfW + 1.2, y, cz + t);
+            this.scene.add(bar);
+        }
+    }
+
+    // Roundabouts — circular junctions with central island
+    placeRoundabouts() {
+        const spots = [
+            [-240, 20],   // west connector start
+            [200, 20],    // NE industrial junction
+            [246, 240],   // waterfront promenade end
+            [-120, 260],  // campus SE corner
+            [120, -118]   // one-way pair west end
+        ];
+        for (const [rx, rz] of spots) {
+            const ring = new THREE.Mesh(new THREE.RingGeometry(5.2, 10.5, 20), this.roadMat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.set(rx, 0.055, rz);
+            this.scene.add(ring);
+            const island = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 0.35, 16), this._mat(0x4C8C3C));
+            island.position.set(rx, 0.18, rz);
+            island.receiveShadow = true;
+            this.scene.add(island);
+            const lip = new THREE.Mesh(new THREE.TorusGeometry(5.2, 0.22, 6, 20), this._mat(0xCFCABE));
+            lip.rotation.x = Math.PI / 2;
+            lip.position.set(rx, 0.36, rz);
+            this.scene.add(lip);
+            // small palm/shrub in center + keep clear of colliders
+            this._shrub(rx, rz);
+            // dashed lane circle
+            for (let i = 0; i < 14; i++) {
+                const a = (i / 14) * Math.PI * 2;
+                const dash = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.18), this.markingMat);
+                dash.rotation.x = -Math.PI / 2;
+                dash.rotation.z = -a;
+                dash.position.set(rx + Math.cos(a) * 8, 0.07, rz + Math.sin(a) * 8);
+                this.scene.add(dash);
+            }
+            // connect ring into traffic graph so cars can circulate
+            const segs = 10;
+            for (let i = 0; i < segs; i++) {
+                const a0 = (i / segs) * Math.PI * 2, a1 = ((i + 1) / segs) * Math.PI * 2;
+                this._roadPolylines.push({
+                    x1: rx + Math.cos(a0) * 8, z1: rz + Math.sin(a0) * 8,
+                    x2: rx + Math.cos(a1) * 8, z2: rz + Math.sin(a1) * 8, width: 6
+                });
+            }
+        }
+    }
+
+    // Traffic lights at busy junctions (pole + red/amber/green head, blinking logic later)
+    placeTrafficSignals() {
+        this._signals = [];
+        const spots = [
+            [0, 0], [0, -80], [0, 80], [-80, 0], [80, 0], [-100, -100], [100, -100],
+            [-100, 100], [100, 100], [0, -140], [-40, -140], [40, -140], [160, 80],
+            [-80, 150], [80, 150], [-160, 200], [200, 20]
+        ];
+        for (const [sx, sz] of spots) {
+            const g = new THREE.Group();
+            const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 5.4, 6), this._mat(0x333333));
+            pole.position.y = 2.7;
+            g.add(pole);
+            const arm = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.12, 0.12), this._mat(0x333333));
+            arm.position.set(1.1, 5.2, 0);
+            g.add(arm);
+            const head = new THREE.Group();
+            head.position.set(2.2, 4.9, 0);
+            const hood = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.3, 0.45), this._mat(0x1d1d1d));
+            head.add(hood);
+            const red = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), new THREE.MeshBasicMaterial({ color: 0xff2b2b }));
+            red.position.set(0, 0.42, 0.24);
+            const amb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), new THREE.MeshBasicMaterial({ color: 0x332200 }));
+            amb.position.set(0, 0, 0.24);
+            const grn = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), new THREE.MeshBasicMaterial({ color: 0x0a330a }));
+            grn.position.set(0, -0.42, 0.24);
+            head.add(red, amb, grn);
+            g.add(head);
+            g.position.set(sx + 6, 0, sz + 6);
+            g.rotation.y = this._rand() * Math.PI * 2;
+            this.scene.add(g);
+            this._signals.push({ red, amb, grn, phase: this._rand() * 6 });
+        }
+    }
+
+    // Road signs: speed limits, one-way arrows, district names, stop signs
+    placeRoadSigns() {
+        const post = (x, z, plate, rotY) => {
+            const g = new THREE.Group();
+            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.4, 5), this._mat(0x777777));
+            p.position.y = 1.2;
+            g.add(p);
+            plate.position.y = 2.3;
+            g.add(plate);
+            g.position.set(x, 0, z);
+            g.rotation.y = rotY || 0;
+            this.scene.add(g);
+        };
+        // Speed limit signs along arterials
+        for (const [x, z, lim] of [[-140, 8, 0], [140, 8, 0], [8, -140, 0], [8, 140, 0], [-232, -60, 1], [170, -170, 1]]) {
+            const s = this._sign(String(lim ? 40 : 60), "#000000", "#FFFFFF", 1.1, 1.5);
+            post(x, z, s, lim ? Math.PI / 2 : 0);
+        }
+        // One-way signs on the paired strip
+        post(122, -127, this._sign("ONE WAY →", "#ffffff", "#14428a", 2.4, 0.9), 0);
+        post(218, -109, this._sign("← ONE WAY", "#ffffff", "#14428a", 2.4, 0.9), 0);
+        // Stop signs at T-junctions
+        for (const [x, z] of [[-12, -78], [12, -78], [-78, -12], [78, -12], [-12, 78], [158, 12]]) {
+            const oct = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 8), this._mat(0xB31922));
+            oct.rotation.x = Math.PI / 2;
+            const lab = this._sign("STOP", "#ffffff", "#B31922", 0.9, 0.5);
+            lab.position.y = 0;
+            const holder = new THREE.Group();
+            holder.add(oct); holder.add(lab);
+            post(x, z, holder, 0);
+        }
+        // District welcome signs
+        const districts = [
+            ["DOWNTOWN", 0, -108, 0], ["OLD TOWN", -205, -105, Math.PI / 2],
+            ["UNIVERSITY", -258, 130, -Math.PI / 2], ["INDUSTRIAL PARK", 165, 12, 0],
+            ["HARBOR DISTRICT", 240, 235, Math.PI], ["RIVIERA SUBURBS", -235, -30, Math.PI / 2]
+        ];
+        for (const [name, x, z, r] of districts) {
+            const g = new THREE.Group();
+            const board = this._sign(name, "#ffffff", "#1B5E20", 8, 1.6);
+            g.add(board);
+            const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.2, 5), this._mat(0x666666));
+            legL.position.set(-2.6, -1.6, 0);
+            const legR = legL.clone(); legR.position.x = 2.6;
+            g.add(legL, legR);
+            g.position.set(x, 3.4, z);
+            g.rotation.y = r;
+            this.scene.add(g);
+        }
+    }
+
+    // Alley access points, driveways into house lots, backyard fences
+    placeAlleysDrivewaysFences() {
+        // Driveway aprons beside suburban houses + rear fences with yards
+        const lots = [
+            [-200, -60], [-210, -110], [-190, -170], [-150, -205],
+            [-100, -215], [-55, -195], [-35, -155], [-70, -135],
+            [-130, -125], [-175, -95],
+            [40, -145], [70, -200], [115, -215], [150, -185],
+            [145, -150], [100, -135], [55, -145], [30, -175],
+            [-170, -50], [-155, -70], [130, -70], [155, -50],
+            [-210, 60], [-215, 110], [-190, 155], [-130, 185],
+            [100, 175], [150, 185], [190, 155]
+        ];
+        this._houseLots = lots;
+        for (const [hx, hz] of lots) {
+            // driveway strip from street side toward house
+            const ang = Math.atan2(hz, hx);
+            const dx = hx + Math.cos(ang) * 6.5, dz = hz + Math.sin(ang) * 6.5;
+            const drive = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.05, 5.5), this._mat(0x6E6A62));
+            drive.position.set(dx, 0.06, dz);
+            drive.rotation.y = -ang + Math.PI / 2;
+            drive.receiveShadow = true;
+            this.scene.add(drive);
+            // fenced yard: picket fence ring around lot (skip front where drive enters)
+            this._fenceRect(hx, hz, 13, 12, ang, 0xCAA47B);
+            // parked family car in driveway sometimes (fixed pattern via index parity)
+        }
+        // Chain-link fences around industrial & back-of-house service areas
+        this._fenceRect(210, 97, 46, 100, 0, 0x9AA0A6, true);
+        this._fenceRect(0, 190, 84, 62, 0, 0x9AA0A6, true);
+        // Loading-zone paint at warehouse backs
+        for (const wz of [40, 78, 116, 154]) {
+            const lz = new THREE.Mesh(new THREE.PlaneGeometry(6, 3), this._mat(0xB8A13B));
+            lz.rotation.x = -Math.PI / 2;
+            lz.position.set(210, 0.062, wz + 10);
+            this.scene.add(lz);
+        }
+    }
+
+    _fenceRect(cx, cz, w, d, facing, color, chainlink = false) {
+        const mk = (x, z, len, horiz) => {
+            const f = new THREE.Group();
+            if (chainlink) {
+                const panel = new THREE.Mesh(new THREE.BoxGeometry(len, 1.8, 0.06), new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.45 }));
+                panel.position.y = 0.9;
+                f.add(panel);
+            } else {
+                const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.9, 0.08), this._mat(color));
+                rail.position.y = 0.5;
+                f.add(rail);
+            }
+            const posts = Math.max(2, Math.round(len / 4));
+            for (let i = 0; i <= posts; i++) {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, chainlink ? 2.0 : 1.1, 0.12), this._mat(chainlink ? 0x70757A : 0x8D6E4C));
+                post.position.set(-len / 2 + (i * len / posts), (chainlink ? 1.0 : 0.55), 0);
+                f.add(post);
+            }
+            f.position.set(x, 0, z);
+            if (!horiz) f.rotation.y = Math.PI / 2;
+            this.scene.add(f);
+        };
+        mk(cx, cz - d / 2, w, true);
+        mk(cx, cz + d / 2, w, true);
+        mk(cx - w / 2, cz, d, false);
+        mk(cx + w / 2, cz, d, false);
+    }
+
+    _shrub(x, z) {
+        const g = new THREE.Group();
+        const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 0), this._mat(0x5B8C3A));
+        m.position.y = 0.7;
+        m.castShadow = true;
+        g.add(m);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
     }
 
     placeLandmarkBuildings() {
@@ -5777,6 +6800,1821 @@ class World {
         });
     }
 
+    // ============================================================
+    // DISTRICTS — hand-placed buildings that give each quarter of
+    // the city its own density, architecture and street character.
+    // ============================================================
+    _storefront(color, awning, signText, w = 12, d = 10) {
+        const g = new THREE.Group();
+        this._box(g, w, 5, d, 0, 2.5, 0, color);
+        this._box(g, w + 0.3, 0.3, d + 0.3, 0, 5.15, 0, 0x4A4540);
+        this._box(g, w * 0.8, 1.6, 0.12, 0, 2.4, d / 2 + 0.08, 0x9FD8E8, false); // shop glass
+        this._box(g, 1.4, 2.4, 0.12, -w / 2 + 1.6, 1.2, d / 2 + 0.08, 0x3E2723, false);
+        if (awning) {
+            const aw = new THREE.Mesh(new THREE.BoxGeometry(w * 0.85, 0.12, 1.6), this._mat(awning));
+            aw.position.set(0, 3.6, d / 2 + 0.8);
+            aw.rotation.x = 0.25;
+            g.add(aw);
+        }
+        if (signText) {
+            const s = this._sign(signText, "#ffffff", "#2b2b2b", w * 0.7, 1.1);
+            s.position.set(0, 4.5, d / 2 + 0.15);
+            g.add(s);
+        }
+        return g;
+    }
+
+    placeDistricts() {
+        // ---- BUSINESS / OFFICE DISTRICT (north of highway, x 12..90, z -100..-20) ----
+        const offices = [
+            [-70, -60, 16, 26, 16, 0x7FA8C9], [-30, -80, 14, 20, 14, 0xB0BEC5],
+            [70, -60, 16, 30, 16, 0x90A4AE], [30, -60, 12, 18, 12, 0xCDB4A0],
+            [-90, -30, 14, 22, 14, 0x88AACC], [90, -30, 14, 16, 14, 0xAEB8AD]
+        ];
+        for (const [bx, bz, w, h, d, col] of offices) {
+            const g = new THREE.Group();
+            this._box(g, w, h, d, 0, h / 2, 0, col);
+            this._box(g, w + 0.4, 0.5, d + 0.4, 0, h + 0.25, 0, 0x37474F);
+            const glass = 0x223344;
+            const rows = Math.floor(h / 3);
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < Math.floor(w / 3); c++) {
+                    this._box(g, 2.0, 1.6, 0.1, -w / 2 + 2 + c * 3, 2.2 + r * 3, d / 2 + 0.06, glass, false);
+                }
+            }
+            // rooftop HVAC units
+            this._box(g, 2.5, 1.2, 2.5, w / 4, h + 1.1, -d / 4, 0x777777, false);
+            this._placeGroup(g, bx, bz, 0, w, h + 2, d);
+        }
+        // ---- COMMERCIAL STRIP (east: diners, grocery, shops along one-way pair) ----
+        const shops = [
+            [140, -138, 0xE07A5F, 0xB33F21, "GROCERY"], [165, -138, 0xD9A84C, 0x8C5A1D, "DINER"],
+            [190, -138, 0x6FA8DC, 0x1D4E89, "SHOP MART"], [215, -138, 0x9CCC65, 0x33691E, "BAKERY"],
+            [140, -98, 0xF0E0C8, 0x8D6E63, "CAFE 24"], [165, -98, 0xC5A3E8, 0x4A148C, "BARBERSHOP"],
+            [190, -98, 0xEF9A9A, 0xB71C1C, "PIZZA"], [215, -98, 0xA5D6A7, 0x1B5E20, "PHARMACY"]
+        ];
+        for (const [sx, sz, wall, awn, label] of shops) {
+            const g = this._storefront(wall, awn, null, 12, 10);
+            const s = this._sign(label, "#ffffff", "#2b2b2b", 8, 1.1);
+            s.position.set(0, 4.5, 5.2);
+            g.add(s);
+            this._placeGroup(g, sx, sz, sz < -120 ? 0 : Math.PI, 13, 6, 11);
+        }
+        // ---- DENSE RESIDENTIAL (apartment blocks around downtown ring) ----
+        const apartments = [
+            [-140, -120, 0x8C6E5A], [-60, -120, 0xA2817B], [60, -120, 0x7E8C9A],
+            [-140, 120, 0x9A8C7E], [-60, 120, 0x6E8C7E], [60, 120, 0x8C7E6E],
+            [-140, -20, 0xB0A090], [-140, 20, 0x9FB0C0], [140, 120, 0xA0909F]
+        ];
+        for (const [ax, az, col] of apartments) this._apartmentBlock(ax, az, col);
+        // ---- TOWNHOUSE ROWS (between downtown and suburbs, west & south) ----
+        const rows = [
+            { x: -230, z: -140, n: 5, rot: Math.PI / 2 },
+            { x: -110, z: -140, n: 4, rot: 0 },
+            { x: -230, z: -40, n: 5, rot: Math.PI / 2 },
+            { x: -100, z: -215, n: 5, rot: 0 }
+        ];
+        for (const r of rows) {
+            for (let i = 0; i < r.n; i++) {
+                const off = i * 8 - (r.n * 8) / 2 + 4;
+                const tx = r.rot === 0 ? r.x + off : r.x;
+                const tz = r.rot === 0 ? r.z : r.z + off;
+                this._townhouse(tx, tz, r.rot, i % 3);
+            }
+        }
+        // ---- VILLAS (lakeside Riviera, far NW loop) ----
+        for (const [vx, vz] of [[-250, -140], [-262, -180], [-230, -210], [-190, -235]]) {
+            this._villa(vx, vz, this._rand() * 0.6);
+        }
+        // ---- OLD TOWN (NW grid: small craft shops, square with gazebo) ----
+        const oldTown = [
+            [-212, -152, 0xD8C4A0, "ANTIQUES"], [-188, -152, 0xC9A87C, "BOOKS"],
+            [-164, -152, 0xB89468, "TOYS"], [-212, -128, 0xE0D0B0, "FLORIST"],
+            [-188, -128, 0xCBB49A, "TAILOR"], [-164, -128, 0xD9C9AC, "CANDY"]
+        ];
+        for (const [ox, oz, col, label] of oldTown) {
+            const g = new THREE.Group();
+            this._box(g, 9, 6, 8, 0, 3, 0, col);
+            const roof = new THREE.Mesh(new THREE.ConeGeometry(6.6, 2.4, 4), this._mat(0x7A4A2B));
+            roof.position.y = 7.2; roof.rotation.y = Math.PI / 4; roof.castShadow = true;
+            g.add(roof);
+            const s = this._sign(label, "#3E2723", "#F5E6C8", 6, 0.9);
+            s.position.set(0, 4.6, 4.15);
+            g.add(s);
+            this._box(g, 2.2, 2.2, 0.12, -2, 2.4, 4.06, 0x9FD8E8, false);
+            this._box(g, 2.2, 2.2, 0.12, 2, 2.4, 4.06, 0x9FD8E8, false);
+            this._placeGroup(g, ox, oz, 0, 10, 9, 9);
+        }
+        this._oldTownSquare(-188, -140);
+        // ---- GOVERNMENT CENTER (plaza north of CBD, between avenue & highway east) ----
+        this._courthouse(130, 20);
+        this._cityHall(-130, -10);
+        this._fireStation(60, 120);
+        this._school(-40, 230);      // high school near stadium box
+        this._school(-260, -240, true); // university lecture hall (campus)
+        // ---- UNIVERSITY CAMPUS (SW loop) ----
+        this._university(-220, 165);
+        this._library(-250, 215);
+        this._dorm(-175, 225);
+        this._dorm(-150, 175);
+        // ---- SMALL WORKSHOPS / GARAGES (industrial fringe) ----
+        for (const [wx, wz] of [[170, -60], [170, -30], [170, 100]]) {
+            const g = new THREE.Group();
+            this._box(g, 12, 4.5, 9, 0, 2.25, 0, 0xB5A18A);
+            this._box(g, 12.3, 0.3, 9.3, 0, 4.65, 0, 0x6D5B49);
+            this._box(g, 3.4, 3.2, 0.15, -3, 1.7, 4.6, 0x555555, false); // garage door
+            this._box(g, 3.4, 3.2, 0.15, 3, 1.7, 4.6, 0x555555, false);
+            const s = this._sign("AUTO REPAIR", "#ffffff", "#5D4037", 8, 1);
+            s.position.set(0, 3.9, 4.7);
+            g.add(s);
+            this._placeGroup(g, wx, wz, Math.PI / 2, 13, 6, 10);
+        }
+        // ---- ABANDONED BUILDINGS (derelict, near rail yard) ----
+        this._abandoned(250, -60, 0.4);
+        this._abandoned(262, -30, -0.3);
+        // ---- MOTEL + GAS STATION on the highway exit ----
+        this._gasStation(-260, -12);
+        this._motel(255, -5, Math.PI / 2);
+    }
+
+    _apartmentBlock(x, z, col) {
+        const g = new THREE.Group();
+        const w = 16, h = 15, d = 12;
+        this._box(g, w, h, d, 0, h / 2, 0, col);
+        this._box(g, w + 0.4, 0.5, d + 0.4, 0, h + 0.25, 0, 0x5A4636);
+        for (let r = 0; r < 4; r++) {
+            for (let c = 0; c < 4; c++) {
+                this._box(g, 2.2, 2.0, 0.12, -w / 2 + 2.5 + c * 3.7, 2.6 + r * 3.2, d / 2 + 0.06, 0x2E3B4E, false);
+                // balcony slab on two columns
+                if ((r + c) % 2 === 0) this._box(g, 2.6, 0.15, 1.1, -w / 2 + 2.5 + c * 3.7, 1.6 + r * 3.2, d / 2 + 0.6, 0x8D6E4C, false);
+            }
+        }
+        this._box(g, 3, 3.4, 0.2, 0, 1.7, d / 2 + 0.08, 0x3E2723, false); // entrance
+        this._box(g, 2, 1.6, 2, -5, h + 1.1, -3, 0x777777, false);        // rooftop tank housing
+        this._placeGroup(g, x, z, 0, w, h + 2, d);
+    }
+
+    _townhouse(x, z, rot, variant) {
+        const g = new THREE.Group();
+        const cols = [0xE8D8C0, 0xD8C0A8, 0xCFC0B0];
+        this._box(g, 6.5, 6.5 + variant, 7, 0, (6.5 + variant) / 2, 0, cols[variant]);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(7, 0.5, 7.5), this._mat(0x5D4037));
+        roof.position.y = 7 + variant;
+        g.add(roof);
+        this._box(g, 1.2, 2.2, 0.12, -1.4, 1.2, 3.56, 0x3E2723, false);
+        this._box(g, 1.6, 1.6, 0.12, 1.5, 4.2, 3.56, 0x9FD8E8, false);
+        // stoop steps
+        this._box(g, 2, 0.2, 0.6, -1.4, 0.1, 4.0, 0x9E9E9E, false);
+        this._placeGroup(g, x, z, rot, 7.5, 9, 8);
+    }
+
+    _villa(x, z, rot) {
+        const g = new THREE.Group();
+        this._box(g, 12, 5, 9, 0, 2.5, 0, 0xF2EAD8);
+        this._box(g, 7, 4, 6, -3, 7, 0, 0xEBE0CC);
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(8.5, 2.6, 4), this._mat(0xA0522D));
+        roof.position.set(0, 6.6, 0); roof.rotation.y = Math.PI / 4; roof.scale.z = 0.75; roof.castShadow = true;
+        g.add(roof);
+        this._box(g, 2, 2.6, 0.15, 0, 1.3, 4.56, 0x4E342E, false);
+        for (let i = -1; i <= 1; i += 2) this._box(g, 1.6, 1.6, 0.12, i * 3.6, 3.2, 4.56, 0x9FD8E8, false);
+        // pool in backyard
+        const pool = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 4), this._mat(0x29B6F6));
+        pool.position.set(0, 0.05, -8);
+        g.add(pool);
+        this._placeGroup(g, x, z, rot, 14, 9, 20);
+    }
+
+    _oldTownSquare(cx, cz) {
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(26, 0.06, 22), this._mat(0xC9BCA4));
+        pad.position.set(cx, 0.05, cz);
+        pad.receiveShadow = true;
+        this.scene.add(pad);
+        // gazebo
+        const gz = new THREE.Group();
+        this._cyl(gz, 3.2, 3.2, 0.25, 0, 0.15, 0, 0xEDE7DA, 8);
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2;
+            this._cyl(gz, 0.12, 0.12, 3, Math.cos(a) * 2.6, 1.6, Math.sin(a) * 2.6, 0xFFFFFF, 5);
+        }
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(3.8, 1.6, 6), this._mat(0x1B5E20));
+        cap.position.y = 3.9;
+        gz.add(cap);
+        gz.position.set(cx, 0.08, cz);
+        this.scene.add(gz);
+        // bandstand benches + planters
+        for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            this._bench(cx + Math.cos(a) * 6, cz + Math.sin(a) * 6, -a);
+        }
+        this._fountain(cx + 9, cz - 7);
+    }
+
+    _fountain(x, z) {
+        const g = new THREE.Group();
+        this._cyl(g, 2.6, 2.8, 0.7, 0, 0.35, 0, 0xB8B0A0, 10);
+        this._cyl(g, 2.2, 2.2, 0.15, 0, 0.72, 0, 0x4FC3F7, 10);
+        this._cyl(g, 0.35, 0.5, 1.6, 0, 1.3, 0, 0xCFC8B8, 8);
+        this._cyl(g, 0.9, 0.2, 0.3, 0, 2.2, 0, 0x4FC3F7, 8);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+
+    _courthouse(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 22, 12, 15, 0, 6, 0, 0xE8E0D0);
+        this._box(g, 23, 1, 16, 0, 12.5, 0, 0xB0A48C);
+        this._box(g, 8, 5, 8, 0, 15, 0, 0xDDD2BC);
+        const dome = new THREE.Mesh(new THREE.SphereGeometry(4.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), this._mat(0x2E7D32));
+        dome.position.y = 17.5;
+        g.add(dome);
+        for (let i = -2; i <= 2; i++) this._cyl(g, 0.45, 0.5, 8, i * 2.6, 4, 7.8, 0xF5F0E6, 8);
+        this._box(g, 18, 0.3, 4, 0, 0.15, 9.5, 0xD8CFBB, false);
+        const s = this._sign("COURTHOUSE", "#3E2723", "#E8E0D0", 10, 1.4);
+        s.position.set(0, 10.6, 7.7);
+        g.add(s);
+        this._minimapLandmarks.push({ x, z, c: "#E8E0D0" });
+        this._placeGroup(g, x, z, 0, 24, 22, 20);
+    }
+
+    _cityHall(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 18, 10, 12, 0, 5, 0, 0xC8D4DE);
+        this._box(g, 5, 20, 5, -6, 10, 0, 0xAFC0CE);
+        this._box(g, 18.4, 0.5, 12.4, 0, 10.2, 0, 0x546E7A);
+        for (let r = 0; r < 2; r++) for (let c = -2; c <= 2; c++)
+            this._box(g, 2, 2, 0.12, c * 3 + 3, 3 + r * 3.4, 6.06, 0x223344, false);
+        const s = this._sign("CITY HALL", "#ffffff", "#37474F", 8, 1.2);
+        s.position.set(2, 8.6, 6.2);
+        g.add(s);
+        this._flag(g, 7, 10.6, 0, 0x1565C0);
+        this._minimapLandmarks.push({ x, z, c: "#C8D4DE" });
+        this._placeGroup(g, x, z, 0, 20, 20, 14);
+    }
+
+    _flag(group, x, y, z, color) {
+        this._cyl(group, 0.06, 0.06, 4, x, y + 2, z, 0xCCCCCC, 5);
+        const f = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
+        f.position.set(x + 0.85, y + 3.5, z);
+        group.add(f);
+    }
+
+    _fireStation(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 16, 7, 12, 0, 3.5, 0, 0xB03A2E);
+        this._box(g, 16.4, 0.4, 12.4, 0, 7.2, 0, 0x7E241B);
+        for (let i = -1; i <= 1; i++) this._box(g, 4, 5, 0.2, i * 5, 2.5, 6.1, 0xEFEFEF, false);
+        const s = this._sign("FIRE ST. 7", "#ffffff", "#7E241B", 8, 1.2);
+        s.position.set(0, 6.4, 6.3);
+        g.add(s);
+        // fire truck (red box body)
+        const t = new THREE.Group();
+        this._box(t, 6.5, 2.2, 2.4, 0, 1.4, 0, 0xC62828);
+        this._box(t, 2, 1.4, 2.3, -2.2, 2.6, 0, 0xEEEEEE);
+        this._cyl(t, 0.5, 0.5, 0.2, 1, 2.9, 0, 0x9E9E9E, 8).rotation.x = Math.PI / 2;
+        t.position.set(0, 0.05, 10);
+        g.add(t);
+        this._minimapLandmarks.push({ x, z, c: "#B03A2E" });
+        this._placeGroup(g, x, z, 0, 18, 8, 16);
+    }
+
+    _school(x, z, isUni = false) {
+        const g = new THREE.Group();
+        const w = isUni ? 26 : 20;
+        this._box(g, w, 8, 12, 0, 4, 0, isUni ? 0xD7C9A7 : 0xE5C9A8);
+        this._box(g, w + 0.4, 0.5, 12.4, 0, 8.25, 0, 0x8D6E63);
+        this._box(g, 6, 4, 6, w / 2 - 4, 10, 0, isUni ? 0xCBB891 : 0xD9BC9A);
+        for (let r = 0; r < 2; r++) for (let c = 0; c < Math.floor(w / 3); c++)
+            this._box(g, 1.9, 1.7, 0.12, -w / 2 + 2 + c * 3, 2.4 + r * 3, 6.06, 0x9FD8E8, false);
+        const s = this._sign(isUni ? "SCIENCE HALL" : "LINCOLN HIGH", "#3E2723", "#FFF8E1", isUni ? 12 : 9, 1.2);
+        s.position.set(0, 6.6, 6.3);
+        g.add(s);
+        // flagpole + sports yard markings behind
+        this._flag(g, -w / 2 + 2, 8.4, 2, 0x1565C0);
+        this._minimapLandmarks.push({ x, z, c: isUni ? "#D7C9A7" : "#E5C9A8" });
+        this._placeGroup(g, x, z, 0, w + 2, 12, 14);
+    }
+
+    _university(cx, cz) {
+        const g = new THREE.Group();
+        this._box(g, 20, 10, 14, 0, 5, 0, 0xC9B48F);
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(13.5, 3.4, 4), this._mat(0x6D4C41));
+        roof.position.y = 11.7; roof.rotation.y = Math.PI / 4; roof.scale.z = 0.7; roof.castShadow = true;
+        g.add(roof);
+        this._box(g, 5, 14, 5, 0, 7, 8.5, 0xBFA87E);          // clock tower base
+        const tRoof = new THREE.Mesh(new THREE.ConeGeometry(3.6, 4, 4), this._mat(0x4E342E));
+        tRoof.position.set(0, 16, 8.5); tRoof.rotation.y = Math.PI / 4;
+        g.add(tRoof);
+        const face = new THREE.Mesh(new THREE.CircleGeometry(1.2, 12), new THREE.MeshBasicMaterial({ color: 0xFFF8E1 }));
+        face.position.set(0, 12.5, 11.06);
+        g.add(face);
+        for (let r = 0; r < 2; r++) for (let c = -2; c <= 2; c++)
+            this._box(g, 1.8, 2.2, 0.12, c * 3.4, 2.6 + r * 3.4, 7.06, 0x3E5C50, false);
+        const s = this._sign("OUTBOUND UNIVERSITY", "#FFFFFF", "#3E5C50", 14, 1.3);
+        s.position.set(0, 8.8, 7.2);
+        g.add(s);
+        this._minimapLandmarks.push({ x: cx, z: cz, c: "#C9B48F" });
+        this._placeGroup(g, cx, cz, 0, 22, 18, 22);
+        // quad lawn + benches
+        const lawn = new THREE.Mesh(new THREE.BoxGeometry(30, 0.08, 18), this._mat(0x4C8C3C));
+        lawn.position.set(cx, 0.04, cz + 22);
+        lawn.receiveShadow = true;
+        this.scene.add(lawn);
+        for (let i = 0; i < 3; i++) this._bench(cx - 8 + i * 8, cz + 22, 0);
+    }
+
+    _library(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 14, 8, 11, 0, 4, 0, 0xB8A88A);
+        this._box(g, 14.4, 0.6, 11.4, 0, 8.3, 0, 0x7A6A50);
+        for (let i = -1; i <= 1; i++) this._cyl(g, 0.4, 0.45, 6, i * 3, 3, 5.8, 0xE8DFC8, 8);
+        const s = this._sign("LIBRARY", "#3E2723", "#E8DFC8", 7, 1.1);
+        s.position.set(0, 7, 5.9);
+        g.add(s);
+        this._minimapLandmarks.push({ x, z, c: "#B8A88A" });
+        this._placeGroup(g, x, z, 0, 15, 9, 12);
+    }
+
+    _dorm(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 12, 12, 10, 0, 6, 0, 0xA87E5A);
+        this._box(g, 12.4, 0.5, 10.4, 0, 12.2, 0, 0x5D4037);
+        for (let r = 0; r < 3; r++) for (let c = -1; c <= 1; c++)
+            this._box(g, 2.2, 1.8, 0.12, c * 3.4, 2.8 + r * 3.2, 5.06, 0x9FD8E8, false);
+        this._minimapLandmarks.push({ x, z, c: "#A87E5A" });
+        this._placeGroup(g, x, z, 0, 13, 13, 11);
+    }
+
+    _gasStation(x, z) {
+        const g = new THREE.Group();
+        // canopy
+        this._box(g, 16, 0.5, 10, 0, 5.5, 0, 0xECEFF1);
+        for (const [px, pz] of [[-7, -4], [7, -4], [-7, 4], [7, 4]])
+            this._cyl(g, 0.25, 0.25, 5.5, px, 2.75, pz, 0xB0BEC5, 6);
+        // pumps
+        for (let i = -1; i <= 1; i += 2) {
+            this._box(g, 1, 1.6, 0.6, i * 2.5, 0.8, 0, 0xD32F2F, false);
+            this._box(g, 0.7, 0.5, 0.5, i * 2.5, 1.9, 0, 0x212121, false);
+        }
+        // convenience store
+        this._box(g, 10, 4, 7, 12, 2, 0, 0xF5EFE0);
+        this._box(g, 10.3, 0.3, 7.3, 12, 4.15, 0, 0x8D6E63);
+        const s = this._sign("GAS · MINI MART", "#FFFFFF", "#C62828", 9, 1.2);
+        s.position.set(12, 5.2, 3.6);
+        g.add(s);
+        const price = this._sign("$1.49/L", "#111111", "#FFEB3B", 3.4, 1);
+        price.position.set(0, 6.6, 0);
+        g.add(price);
+        this._minimapLandmarks.push({ x, z, c: "#ECEFF1" });
+        this._placeGroup(g, x, z, 0, 26, 7, 12);
+    }
+
+    _motel(x, z, rot) {
+        const g = new THREE.Group();
+        this._box(g, 20, 6, 8, 0, 3, 0, 0x9E7B5F);
+        this._box(g, 20.4, 0.4, 8.4, 0, 6.2, 0, 0x5D4037);
+        for (let i = -3; i <= 3; i++) {
+            this._box(g, 1.4, 2.2, 0.12, i * 2.6, 1.2, 4.06, 0x3E2723, false);
+            this._box(g, 1.2, 1.2, 0.1, i * 2.6, 4.2, 4.06, 0x9FD8E8, false);
+        }
+        // walkway railing
+        this._box(g, 20, 0.15, 1.4, 0, 3.4, 4.8, 0x777777, false);
+        const neon = this._sign("MOTEL ★ VACANCY", "#FF5252", "#1A1A1A", 10, 1.6);
+        neon.position.set(0, 7.6, 0);
+        g.add(neon);
+        this._cyl(g, 0.1, 0.1, 3, 0, 6.4, 0, 0x555555, 5);
+        // ice machine + vending at office
+        this._box(g, 1.2, 1.4, 0.8, 8, 0.7, 5.2, 0x37474F, false);
+        this._minimapLandmarks.push({ x, z, c: "#9E7B5F" });
+        this._placeGroup(g, x, z, rot, 22, 9, 12);
+    }
+
+    _abandoned(x, z, rot) {
+        const g = new THREE.Group();
+        this._box(g, 12, 9, 10, 0, 4.5, 0, 0x6B655C);
+        // collapsed roof chunk
+        const hole = new THREE.Mesh(new THREE.BoxGeometry(5, 0.4, 4), this._mat(0x2b2b2b));
+        hole.position.set(2, 9.1, -1);
+        hole.rotation.z = 0.12;
+        g.add(hole);
+        // boarded windows
+        for (let i = -1; i <= 1; i++) this._box(g, 2, 2, 0.12, i * 3.4, 3.4, 5.06, 0x8D6E4C, false);
+        // graffiti strip
+        this._box(g, 6, 1.4, 0.1, -2, 1.4, 5.06, 0x7B1FA2, false);
+        // leaning pole + weeds
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4, 5), this._mat(0x555555));
+        pole.position.set(7, 2, 4);
+        pole.rotation.z = 0.4;
+        g.add(pole);
+        this._placeGroup(g, x, z, rot, 13, 10, 11);
+    }
+
+    _bench(x, z, rot) {
+        const g = new THREE.Group();
+        this._box(g, 1.8, 0.08, 0.5, 0, 0.45, 0, 0x8D6E4C, false);
+        this._box(g, 1.8, 0.5, 0.08, 0, 0.75, -0.22, 0x8D6E4C, false);
+        this._box(g, 0.1, 0.45, 0.5, -0.8, 0.22, 0, 0x444444, false);
+        this._box(g, 0.1, 0.45, 0.5, 0.8, 0.22, 0, 0x444444, false);
+        g.position.set(x, 0, z);
+        g.rotation.y = rot || 0;
+        this.scene.add(g);
+    }
+
+    // ============================================================
+    // WATERFRONT & HARBOR (east bank of river)
+    // ============================================================
+    placeWaterfrontHarbor() {
+        const RX = this.terrain.RIVER_X;
+        // Promenade paving along east bank from bridge down to harbor
+        const prom = new THREE.Mesh(new THREE.BoxGeometry(8, 0.08, 260), this._mat(0xC8BFA8));
+        prom.position.set(RX + 45, 0.04, 110);
+        prom.receiveShadow = true;
+        this.scene.add(prom);
+        // seawall
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.2, 260), this._mat(0x8C8578));
+        wall.position.set(RX + 49.5, 0.6, 110);
+        this.scene.add(wall);
+        // bollards + lamps along promenade
+        for (let z = 0; z <= 230; z += 18) {
+            const b = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.8, 6), this._mat(0x37474F));
+            b.position.set(RX + 48, 0.4, z);
+            this.scene.add(b);
+        }
+        // Piers into the river
+        const woodMat = this._mat(0x8D6E4C);
+        for (const pz of [120, 170]) {
+            const pier = new THREE.Group();
+            const deck = new THREE.Mesh(new THREE.BoxGeometry(34, 0.4, 7), woodMat);
+            deck.position.set(-17, 1.1, 0);
+            deck.castShadow = true;
+            pier.add(deck);
+            for (let i = 0; i < 5; i++) {
+                const pile = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 3.5, 6), this._mat(0x5D4037));
+                pile.position.set(-4 - i * 7, -0.6, 2.6);
+                pier.add(pile);
+                const pile2 = pile.clone(); pile2.position.z = -2.6;
+                pier.add(pile2);
+            }
+            pier.position.set(RX + 40, 0, pz);
+            this.scene.add(pier);
+            this._minimapLandmarks.push({ x: RX + 22, z: pz, c: "#8D6E4C" });
+        }
+        // Boats moored at piers
+        this._boat(RX + 20, 112, 0.3, 0xD32F2F);
+        this._boat(RX + 18, 178, -0.2, 0x1976D2);
+        this._boat(RX + 26, 60, 1.2, 0xF9A825);
+        // Fishing fleet sheds + fish market
+        const shed = new THREE.Group();
+        this._box(shed, 16, 5, 9, 0, 2.5, 0, 0x90A4AE);
+        const sr = new THREE.Mesh(new THREE.CylinderGeometry(8.3, 8.3, 16.4, 8, 1, false, 0, Math.PI), this._mat(0x607D8B));
+        sr.rotation.z = Math.PI / 2; sr.rotation.y = Math.PI / 2; sr.position.y = 5;
+        shed.add(sr);
+        const fs = this._sign("FISH MARKET", "#FFFFFF", "#37474F", 9, 1.2);
+        fs.position.set(0, 4.4, 4.7);
+        shed.add(fs);
+        this._placeGroup(shed, RX + 62, 145, Math.PI / 2, 18, 8, 11);
+        // Harbor crane landmark
+        const crane = new THREE.Group();
+        this._box(crane, 2, 18, 2, 0, 9, 0, 0xE8A33D);
+        this._box(crane, 2, 18, 2, 6, 9, 0, 0xE8A33D);
+        this._box(crane, 16, 1.6, 1.6, 0, 18.5, 0, 0xC77F1F);
+        this._box(crane, 4, 3, 3, -6, 16.5, 0, 0x8D6E4C);
+        this._cyl(crane, 0.06, 0.06, 6, 4, 15, 0, 0x333333, 4);
+        this._box(crane, 1.4, 1, 1.4, 4, 11.6, 0, 0x455A64, false);
+        crane.position.set(RX + 66, 0, 205);
+        this.scene.add(crane);
+        this._minimapLandmarks.push({ x: RX + 66, z: 205, c: "#E8A33D" });
+        // Shipping containers stacked near quay
+        const contCols = [0xC62828, 0x1565C0, 0x2E7D32, 0xEF6C00, 0x6A1B9A];
+        let ci = 0;
+        for (const [cx2, cz2] of [[RX + 80, 90], [RX + 80, 100], [RX + 92, 90], [RX + 92, 100], [RX + 86, 130], [RX + 86, 140]]) {
+            const cont = new THREE.Mesh(new THREE.BoxGeometry(9, 3.2, 3.4), this._mat(contCols[ci % contCols.length]));
+            cont.position.set(cx2, 1.6 + (ci % 2) * 3.2, cz2);
+            cont.castShadow = true;
+            this.scene.add(cont);
+            this._addCollider(cx2, cz2, 9, 6, 3.6);
+            ci++;
+        }
+        // Lighthouse at river mouth (south)
+        const lh = new THREE.Group();
+        this._cyl(lh, 1.6, 2.6, 14, 0, 7, 0, 0xEFEFEF, 10);
+        this._cyl(lh, 1.7, 1.7, 0.8, 0, 14.4, 0, 0xB71C1C, 10);
+        this._cyl(lh, 1.2, 1.2, 2, 0, 15.6, 0, 0xFFE082, 8);
+        const lcap = new THREE.Mesh(new THREE.ConeGeometry(1.6, 1.6, 8), this._mat(0xB71C1C));
+        lcap.position.y = 17.2;
+        lh.add(lcap);
+        lh.position.set(RX + 30, 0, 330);
+        this.scene.add(lh);
+        this._addCollider(RX + 30, 330, 5, 18, 5);
+        this._minimapLandmarks.push({ x: RX + 30, z: 330, c: "#FFE082" });
+    }
+
+    _boat(x, z, rot, color) {
+        const g = new THREE.Group();
+        const hull = new THREE.Mesh(new THREE.BoxGeometry(8, 1.2, 3), this._mat(color));
+        hull.position.y = 0.2;
+        g.add(hull);
+        const bow = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.4, 4), this._mat(color));
+        bow.rotation.z = Math.PI / 2; bow.rotation.y = Math.PI / 4;
+        bow.position.set(-5, 0.2, 0);
+        bow.scale.z = 0.5;
+        g.add(bow);
+        this._box(g, 2.4, 1.2, 2, 1.6, 1.2, 0, 0xFAFAFA, false);
+        this._cyl(g, 0.06, 0.06, 4, 0, 3, 0, 0x8D6E4C, 4);
+        g.position.set(x, -0.6, z);
+        g.rotation.y = rot;
+        this.scene.add(g);
+    }
+
+    // ============================================================
+    // PUBLIC SPACES — parks, playgrounds, plazas, sports fields,
+    // cemetery, green spaces. Every open area has a purpose.
+    // ============================================================
+    _lawnPatch(x, z, w, d) {
+        const lawn = new THREE.Mesh(new THREE.BoxGeometry(w, 0.07, d), this._mat(0x4C8C3C));
+        lawn.position.set(x, 0.035, z);
+        lawn.receiveShadow = true;
+        this.scene.add(lawn);
+    }
+
+    placePublicSpaces() {
+        // --- Central Park (block between avenue, ring streets, north) ---
+        this._lawnPatch(55, 55, 78, 78);
+        this._parkPaths(55, 55);
+        for (const [tx, tz] of [[25, 30], [80, 30], [25, 80], [80, 80], [55, 45], [40, 70], [70, 65]]) this._pine(tx, tz);
+        this._pond(62, 62, 12, 8);
+        this._picnic(35, 55);
+        for (let i = 0; i < 4; i++) this._bench(50 + i * 4, 40, 0);
+        // --- Riverside Park (west of river, north stretch) ---
+        this._lawnPatch(240, -140, 44, 90);
+        for (const [tx, tz] of [[228, -160], [252, -130], [238, -100], [250, -170]]) this._pine(tx, tz);
+        for (let i = 0; i < 3; i++) this._bench(240, -150 + i * 12, Math.PI / 2);
+        this._joggingTrack(240, -140);
+        // --- North Grand Park (big green between suburbs & stadium) ---
+        this._lawnPatch(-10, 250, 120, 60);
+        this._playground(30, 250);
+        for (const [tx, tz] of [[-50, 240], [-70, 265], [-30, 268], [10, 235]]) this._pine(tx, tz);
+        this._bandstage(-45, 255);
+        // --- Sports fields complex (south-east of stadium) ---
+        this._soccerField(130, 210);
+        this._soccerField(130, 260);
+        this._basketballCourt(95, 235);
+        this._basketballCourt(-140, -230);
+        this._tennisCourts(185, 240);
+        // --- Small green squares scattered through residential blocks ---
+        for (const [gx, gz] of [[-140, -60], [-60, -60], [-60, 60], [140, 80], [-180, -20]]) {
+            this._lawnPatch(gx, gz, 16, 16);
+            this._pine(gx + 4, gz + 4);
+            this._bench(gx - 4, gz, 0);
+            this._planter(gx + 4, gz - 5);
+        }
+        // --- Downtown Plaza (fountain square at avenue/highway crossing south) ---
+        this._plaza(0, -55);
+        // --- Cemetery (quiet NE corner outside dense grid) ---
+        this._cemetery(-255, -235);
+        // --- Bus stops & shelters on arterials ---
+        for (const [bx, bz, r] of [[-60, 8, 0], [60, -8, Math.PI], [8, -120, Math.PI / 2], [-8, 120, -Math.PI / 2], [170, 80, 0], [-120, -80, Math.PI]])
+            this._busStop(bx, bz, r);
+    }
+
+    _parkPaths(cx, cz) {
+        const mat = this._mat(0xC9BCA4);
+        const p1 = new THREE.Mesh(new THREE.BoxGeometry(70, 0.075, 3.4), mat);
+        p1.position.set(cx, 0.055, cz);
+        const p2 = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.075, 70), mat);
+        p2.position.set(cx, 0.056, cz);
+        p1.receiveShadow = p2.receiveShadow = true;
+        this.scene.add(p1, p2);
+    }
+
+    _pond(x, z, w, d) {
+        const water = new THREE.Mesh(new THREE.BoxGeometry(w, 0.1, d), new THREE.MeshLambertMaterial({ color: 0x2F8FD6, transparent: true, opacity: 0.85 }));
+        water.position.set(x, 0.09, z);
+        this.scene.add(water);
+        const rim = new THREE.Mesh(new THREE.BoxGeometry(w + 2, 0.12, d + 2), this._mat(0xB8B0A0));
+        rim.position.set(x, 0.05, z);
+        this.scene.add(rim);
+        this._duck(x - 2, z);
+        this._duck(x + 3, z + 1);
+    }
+
+    _duck(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 0.5, 0.3, 0.3, 0, 0.25, 0, 0xFAFAFA, false);
+        this._box(g, 0.18, 0.2, 0.18, 0.25, 0.45, 0, 0xFAFAFA, false);
+        this._box(g, 0.12, 0.08, 0.1, 0.38, 0.42, 0, 0xF9A825, false);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+
+    _picnic(x, z) {
+        for (let i = 0; i < 2; i++) {
+            const g = new THREE.Group();
+            this._box(g, 2.2, 0.1, 0.8, 0, 0.75, 0, 0x8D6E4C, false);
+            this._box(g, 0.2, 0.75, 0.8, -0.9, 0.37, 0, 0x6D4C41, false);
+            this._box(g, 0.2, 0.75, 0.8, 0.9, 0.37, 0, 0x6D4C41, false);
+            g.position.set(x, 0, z + i * 3);
+            this.scene.add(g);
+        }
+    }
+
+    _playground(x, z) {
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(18, 0.09, 14), this._mat(0xD8C27A));
+        pad.position.set(x, 0.05, z);
+        pad.receiveShadow = true;
+        this.scene.add(pad);
+        // slide
+        const slide = new THREE.Group();
+        this._cyl(slide, 0.1, 0.1, 3, -2, 1.5, 0, 0xE53935, 5);
+        this._box(slide, 1, 0.12, 3.6, 0, 2.4, 0.6, 0xFDD835, false).rotation.x = 0.6;
+        this._box(slide, 1.2, 0.4, 1.2, -2, 3.1, 0, 0xFB8C00, false);
+        slide.position.set(x - 5, 0, z - 3);
+        this.scene.add(slide);
+        // swings
+        const sw = new THREE.Group();
+        this._box(sw, 5, 0.15, 0.15, 0, 2.6, 0, 0x1E88E5, false);
+        for (const sx of [-1.5, 0, 1.5]) {
+            this._cyl(sw, 0.03, 0.03, 2.2, sx, 1.5, 0, 0x444444, 4);
+            this._box(sw, 0.5, 0.06, 0.3, sx, 0.45, 0, 0x43A047, false);
+        }
+        sw.position.set(x + 5, 0, z - 3);
+        this.scene.add(sw);
+        // merry-go-round
+        const mgr = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.2, 10), this._mat(0xAB47BC));
+        mgr.position.set(x, 0.3, z + 4);
+        this.scene.add(mgr);
+        // sandbox
+        const sand = new THREE.Mesh(new THREE.BoxGeometry(4, 0.12, 3), this._mat(0xE8CD96));
+        sand.position.set(x + 6, 0.1, z + 4);
+        this.scene.add(sand);
+    }
+
+    _bandstage(x, z) {
+        const g = new THREE.Group();
+        this._cyl(g, 5, 5.5, 0.6, 0, 0.3, 0, 0xB8A88A, 10);
+        for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * Math.PI * 2;
+            this._cyl(g, 0.14, 0.14, 3.4, Math.cos(a) * 4, 2.3, Math.sin(a) * 4, 0xFFFFFF, 5);
+        }
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(5.6, 2, 8), this._mat(0x1B5E20));
+        roof.position.y = 4.6;
+        g.add(roof);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+
+    _soccerField(x, z) {
+        const field = new THREE.Mesh(new THREE.BoxGeometry(46, 0.08, 28), this._mat(0x3F8F35));
+        field.position.set(x, 0.04, z);
+        field.receiveShadow = true;
+        this.scene.add(field);
+        // stripes via lighter overlay bands
+        for (let i = 0; i < 4; i++) {
+            const band = new THREE.Mesh(new THREE.BoxGeometry(46, 0.02, 3.5), this._mat(0x4CA23F));
+            band.position.set(x, 0.09, z - 10.5 + i * 7);
+            this.scene.add(band);
+        }
+        const line = this._mat(0xFAFAFA);
+        const border = new THREE.Mesh(new THREE.PlaneGeometry(44, 26), new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true }));
+        border.rotation.x = -Math.PI / 2;
+        border.position.set(x, 0.11, z);
+        this.scene.add(border);
+        // goals
+        for (const gx of [x - 23, x + 23]) {
+            const goal = new THREE.Group();
+            this._box(goal, 0.12, 2.4, 0.12, 0, 1.2, -3.6, 0xFAFAFA, false);
+            this._box(goal, 0.12, 2.4, 0.12, 0, 1.2, 3.6, 0xFAFAFA, false);
+            this._box(goal, 0.12, 0.12, 7.3, 0, 2.4, 0, 0xFAFAFA, false);
+            goal.position.set(gx, 0, z);
+            this.scene.add(goal);
+        }
+        void line;
+    }
+
+    _basketballCourt(x, z) {
+        const court = new THREE.Mesh(new THREE.BoxGeometry(16, 0.09, 9), this._mat(0xB35A38));
+        court.position.set(x, 0.05, z);
+        court.receiveShadow = true;
+        this.scene.add(court);
+        const ln = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const mid = new THREE.Mesh(new THREE.PlaneGeometry(0.15, 9), ln);
+        mid.rotation.x = -Math.PI / 2;
+        mid.position.set(x, 0.11, z);
+        this.scene.add(mid);
+        const circle = new THREE.Mesh(new THREE.RingGeometry(1.4, 1.55, 16), ln);
+        circle.rotation.x = -Math.PI / 2;
+        circle.position.set(x, 0.11, z);
+        this.scene.add(circle);
+        for (const hx of [x - 8, x + 8]) {
+            const pole = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3, 0.15), this._mat(0x37474F));
+            pole.position.set(hx + Math.sign(hx - x) * 0.6, 1.5, z);
+            this.scene.add(pole);
+            const back = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.1, 1.6), this._mat(0xECEFF1));
+            back.position.set(hx + Math.sign(hx - x) * 0.4, 2.9, z);
+            this.scene.add(back);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.04, 5, 10), this._mat(0xE53935));
+            rim.rotation.y = Math.PI / 2;
+            rim.position.set(hx, 2.6, z);
+            this.scene.add(rim);
+        }
+    }
+
+    _tennisCourts(x, z) {
+        for (let i = 0; i < 2; i++) {
+            const c = new THREE.Mesh(new THREE.BoxGeometry(11, 0.08, 18), this._mat(0x2E7D9A));
+            c.position.set(x, 0.04, z + i * 13);
+            c.receiveShadow = true;
+            this.scene.add(c);
+            const net = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.9), new THREE.MeshBasicMaterial({ color: 0xdddddd, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+            net.position.set(x, 0.5, z + i * 13);
+            this.scene.add(net);
+        }
+    }
+
+    _joggingTrack(cx, cz) {
+        const track = new THREE.Mesh(new THREE.RingGeometry(14, 18, 24), new THREE.MeshLambertMaterial({ color: 0xB5502B, side: THREE.DoubleSide }));
+        track.rotation.x = -Math.PI / 2;
+        track.position.set(cx, 0.06, cz);
+        this.scene.add(track);
+    }
+
+    _plaza(x, z) {
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(24, 0.07, 20), this._mat(0xD5CDBB));
+        pad.position.set(x, 0.04, z);
+        pad.receiveShadow = true;
+        this.scene.add(pad);
+        this._fountain(x, z);
+        for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * Math.PI * 2;
+            this._planter(x + Math.cos(a) * 8, z + Math.sin(a) * 7);
+        }
+        for (let i = 0; i < 3; i++) this._bench(x - 6 + i * 6, z + 8, Math.PI);
+        // monument column (landmark)
+        const mon = new THREE.Group();
+        this._box(mon, 2.4, 0.6, 2.4, 0, 0.3, 0, 0x9E9E9E);
+        this._cyl(mon, 0.7, 0.9, 6, 0, 3.6, 0, 0xCFC8B8, 8);
+        const statue = new THREE.Mesh(new THREE.CapsuleGeometry(0.55, 1.4, 3, 6), this._mat(0x3E6B4F));
+        statue.position.y = 7.6;
+        mon.add(statue);
+        mon.position.set(x, 0.05, z - 6);
+        this.scene.add(mon);
+        this._minimapLandmarks.push({ x, z, c: "#D5CDBB" });
+    }
+
+    _planter(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 1.6, 0.7, 1.6, 0, 0.35, 0, 0x8D6E4C, false);
+        this._box(g, 1.3, 0.25, 1.3, 0, 0.75, 0, 0x5B8C3A, false);
+        const fl = new THREE.Mesh(new THREE.SphereGeometry(0.22, 5, 4), this._mat([0xE91E63, 0xFFEB3B, 0xAB47BC][Math.floor(this._rand() * 3)]));
+        fl.position.y = 1;
+        g.add(fl);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+
+    _cemetery(x, z) {
+        this._lawnPatch(x, z, 56, 44);
+        // chapel
+        const ch = new THREE.Group();
+        this._box(ch, 8, 5, 6, 0, 2.5, 0, 0xE0DAD0);
+        const cr = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.6, 4), this._mat(0x4E342E));
+        cr.position.y = 6.3; cr.rotation.y = Math.PI / 4;
+        ch.add(cr);
+        this._box(ch, 0.3, 2.2, 0.3, 0, 8.4, 0, 0x8D6E4C, false);
+        this._box(ch, 1.2, 0.3, 0.3, 0, 8.8, 0, 0x8D6E4C, false);
+        ch.position.set(x - 18, 0, z - 12);
+        this.scene.add(ch);
+        // headstones in orderly rows (fixed grid, slight deterministic tilt)
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 8; c++) {
+                const hs = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.18), this._mat(0xB8B4AC));
+                hs.position.set(x - 8 + c * 3.4, 0.55, z - 8 + r * 4.6);
+                hs.rotation.z = (this._rand() - 0.5) * 0.08;
+                hs.castShadow = true;
+                this.scene.add(hs);
+            }
+        }
+        // iron perimeter fence
+        this._fenceRect(x, z, 58, 46, 0, 0x4A4A4A, true);
+        // mausoleum
+        const mz = new THREE.Group();
+        this._box(mz, 6, 5, 6, 0, 2.5, 0, 0xC8C0B4);
+        const mroof = new THREE.Mesh(new THREE.ConeGeometry(4.6, 2, 4), this._mat(0x6D6458));
+        mroof.position.y = 6; mroof.rotation.y = Math.PI / 4;
+        mz.add(mroof);
+        mz.position.set(x + 14, 0, z + 12);
+        this.scene.add(mz);
+        this._minimapLandmarks.push({ x, z, c: "#8C8C8C" });
+    }
+
+    _busStop(x, z, rot) {
+        const g = new THREE.Group();
+        this._box(g, 3, 0.08, 1.6, 0, 0.05, 0, 0x9E9E9E, false);       // pad
+        this._box(g, 2.6, 2.2, 0.1, 0, 1.2, -0.7, 0x8EC8E8, false);    // glass back
+        this._box(g, 0.12, 2.4, 1.5, -1.3, 1.2, 0, 0x455A64, false);
+        this._box(g, 0.12, 2.4, 1.5, 1.3, 1.2, 0, 0x455A64, false);
+        this._box(g, 2.9, 0.12, 1.9, 0, 2.45, 0, 0x37474F, false);     // roof
+        this._box(g, 1.8, 0.12, 0.5, 0, 0.65, 0, 0x8D6E4C, false);     // bench
+        const sign = this._sign("BUS", "#FFFFFF", "#1565C0", 1, 0.6);
+        sign.position.set(1.9, 2.6, 0);
+        const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.6, 5), this._mat(0x666666));
+        sp.position.set(1.9, 1.3, 0);
+        g.add(sign, sp);
+        g.position.set(x, 0, z);
+        g.rotation.y = rot;
+        this.scene.add(g);
+    }
+
+    // ============================================================
+    // INDUSTRIAL EXTRAS — factory, depot, silos, radio & water towers
+    // ============================================================
+    placeIndustrialExtra() {
+        const RX = this.terrain.RIVER_X;
+        // Factory block north of warehouses
+        const fac = new THREE.Group();
+        this._box(fac, 34, 12, 18, 0, 6, 0, 0x8A8F98);
+        this._box(fac, 34.4, 0.5, 18.4, 0, 12.3, 0, 0x5A5F66);
+        for (let i = -1; i <= 1; i++) {
+            const saw = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 10, 3, 1, false, 0, Math.PI), this._mat(0xAEB4BC));
+            saw.rotation.z = Math.PI / 2;
+            saw.rotation.y = Math.PI / 2;
+            saw.position.set(i * 10, 12.4, 0);
+            fac.add(saw);
+        }
+        // smokestacks
+        for (const sx of [-12, -8]) {
+            this._cyl(fac, 1, 1.4, 22, sx, 11, -6, 0xB0563C, 8);
+            this._cyl(fac, 1.15, 1.15, 1.2, sx, 21.8, -6, 0x3E2723, 8);
+        }
+        this._box(fac, 5, 4, 0.2, 10, 2, 9.1, 0x616161, false); // loading bay
+        const fs = this._sign("OUTBOUND STEEL CO.", "#FFFFFF", "#37474F", 14, 1.4);
+        fs.position.set(0, 9.4, 9.2);
+        fac.add(fs);
+        this._minimapLandmarks.push({ x: 210, z: -60, c: "#8A8F98" });
+        this._placeGroup(fac, 210, -60, 0, 36, 24, 20);
+        // Rail depot + warehouse row south of factories
+        this.buildWarehouse(250, 190);
+        this._depot(255, -140);
+        // Grain silos by the harbor approach
+        const silo = new THREE.Group();
+        for (let i = 0; i < 4; i++) {
+            this._cyl(silo, 3, 3, 14, i * 6.6, 7, 0, 0xD8D2C4, 10);
+            const cap = new THREE.Mesh(new THREE.SphereGeometry(3, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), this._mat(0xB8B2A4));
+            cap.position.set(i * 6.6, 14, 0);
+            silo.add(cap);
+        }
+        this._box(silo, 24, 3, 4, 9.9, 16.5, 0, 0x9AA0A6, false); // conveyor house
+        silo.position.set(RX + 95, 0, 20);
+        this.scene.add(silo);
+        this._addCollider(RX + 95 + 10, 20, 28, 18, 8);
+        this._minimapLandmarks.push({ x: RX + 105, z: 20, c: "#D8D2C4" });
+        // Water tower over industrial park
+        this._waterTower(175, 140);
+        // Radio mast hill (east outskirts)
+        this._radioTower(360, -220);
+        // Tall observation tower landmark downtown
+        this._tallTower(-60, -160);
+        // Transformers yard + depot fences
+        this._fenceRect(255, -140, 40, 30, 0, 0x9AA0A6, true);
+        this._fenceRect(175, 140, 20, 20, 0, 0x9AA0A6, true);
+    }
+
+    _depot(x, z) {
+        const g = new THREE.Group();
+        this._box(g, 26, 7, 14, 0, 3.5, 0, 0xA9A29B);
+        this._box(g, 26.4, 0.4, 14.4, 0, 7.2, 0, 0x6D6660);
+        for (let i = -1; i <= 1; i++) this._box(g, 6, 5, 0.2, i * 8, 2.5, 7.1, 0x78909C, false);
+        const s = this._sign("TRANSIT DEPOT", "#FFFFFF", "#37474F", 12, 1.3);
+        s.position.set(0, 6.2, 7.3);
+        g.add(s);
+        // buses parked outside
+        for (let i = 0; i < 3; i++) this._busMesh(g, -8 + i * 8, 0.05, 12, 0);
+        this._minimapLandmarks.push({ x, z, c: "#A9A29B" });
+        this._placeGroup(g, x, z, 0, 28, 8, 30);
+    }
+
+    _busMesh(parent, x, y, z, rot) {
+        const b = new THREE.Group();
+        this._box(b, 9, 2.4, 2.4, 0, 1.5, 0, 0xF9A825);
+        this._box(b, 9.1, 0.2, 2.5, 0, 2.75, 0, 0xF5F5F5, false);
+        for (let i = -3; i <= 3; i++) this._box(b, 1.1, 1, 0.1, i * 1.2, 1.9, 1.26, 0x223344, false);
+        for (const wx of [-3, 3]) {
+            const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.3, 8), this._mat(0x151515));
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(wx, 0.5, 1.1);
+            b.add(wheel);
+            const w2 = wheel.clone(); w2.position.z = -1.1; b.add(w2);
+        }
+        b.position.set(x, y, z);
+        b.rotation.y = rot;
+        parent.add(b);
+    }
+
+    _waterTower(x, z) {
+        const g = new THREE.Group();
+        for (let i = 0; i < 4; i++) {
+            const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 16, 5), this._mat(0x8D9AA8));
+            leg.position.set(Math.cos(a) * 3.2, 8, Math.sin(a) * 3.2);
+            leg.rotation.z = -Math.cos(a) * 0.12;
+            leg.rotation.x = Math.sin(a) * 0.12;
+            g.add(leg);
+        }
+        this._cyl(g, 4.5, 4.5, 5, 0, 18, 0, 0xB9C4CF, 12);
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(4.8, 2.4, 12), this._mat(0x7A8B99));
+        cap.position.y = 21.6;
+        g.add(cap);
+        const s = this._sign("OUTBOUND", "#37474F", "#B9C4CF", 7, 1);
+        s.position.set(0, 18.5, 4.6);
+        g.add(s);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+        this._addCollider(x, z, 8, 24, 8);
+        this._minimapLandmarks.push({ x, z, c: "#B9C4CF" });
+    }
+
+    _radioTower(x, z) {
+        const gy = this.getTerrainHeight(x, z);
+        const g = new THREE.Group();
+        const steel = this._mat(0xC0C8D0);
+        for (let i = 0; i < 3; i++) {
+            const a = (i / 3) * Math.PI * 2;
+            const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.3, 46, 5), steel);
+            leg.position.set(Math.cos(a) * 3.4, 23, Math.sin(a) * 3.4);
+            leg.rotation.z = -Math.cos(a) * 0.14;
+            leg.rotation.x = Math.sin(a) * 0.14;
+            g.add(leg);
+        }
+        for (let hgt = 6; hgt < 44; hgt += 7) {
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(3.2 - hgt * 0.045, 0.09, 4, 8), steel);
+            ring.rotation.x = Math.PI / 2;
+            ring.position.y = hgt;
+            g.add(ring);
+        }
+        this._cyl(g, 0.12, 0.12, 6, 0, 48, 0, 0x999999, 5);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 5), new THREE.MeshBasicMaterial({ color: 0xff3344 }));
+        bulb.position.y = 51;
+        g.add(bulb);
+        g.position.set(x, gy, z);
+        this.scene.add(g);
+        this._addCollider(x, z, 6, 50, 6);
+        this._minimapLandmarks.push({ x, z, c: "#C0C8D0" });
+    }
+
+    _tallTower(x, z) {
+        // Signature observation tower for the skyline
+        const g = new THREE.Group();
+        this._box(g, 6, 34, 6, 0, 17, 0, 0x9FB6C9);
+        this._box(g, 9, 4, 9, 0, 36, 0, 0xECEFF1);
+        const pod = new THREE.Mesh(new THREE.CylinderGeometry(6, 4.5, 6, 10), this._mat(0xF5F5F5));
+        pod.position.y = 41;
+        g.add(pod);
+        const win = new THREE.Mesh(new THREE.CylinderGeometry(6.05, 4.55, 2.4, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0x224466, side: THREE.DoubleSide }));
+        win.position.y = 41;
+        g.add(win);
+        this._cyl(g, 0.2, 0.4, 8, 0, 48, 0, 0xB0BEC5, 6);
+        const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 5), new THREE.MeshBasicMaterial({ color: 0x66ccff }));
+        beacon.position.y = 52.5;
+        g.add(beacon);
+        this._minimapLandmarks.push({ x, z, c: "#9FB6C9" });
+        this._placeGroup(g, x, z, 0, 10, 54, 10);
+    }
+
+    // ============================================================
+    // PARKING: multi-storey garages + surface lots at anchors
+    // ============================================================
+    placeParkingAndLots() {
+        this._parkingGarage(-100, -55);
+        this.placeParkingLot(110, -140, 40, 24);   // mall overflow lot
+        this.placeParkingLot(-175, 120, 30, 20);   // police station visitor lot
+        this.placeParkingLot(30, 150, 30, 20);     // stadium lot A
+        this.placeParkingLot(-30, 150, 30, 20);    // stadium lot B
+        this.placeParkingLot(246, 60, 20, 30);     // waterfront lot
+    }
+
+    _parkingGarage(x, z) {
+        const g = new THREE.Group();
+        const W = 26, D = 20, levels = 4, LH = 3.4;
+        for (let l = 0; l < levels; l++) {
+            this._box(g, W, 0.4, D, 0, l * LH + 0.2, 0, 0xBDB8AE);
+            // facade strips with openings left as gaps between columns
+            for (const side of [1, -1]) {
+                for (let c = -2; c <= 2; c++) {
+                    this._box(g, 1, LH - 0.4, 0.5, c * (W / 5), l * LH + LH / 2, side * (D / 2), 0xA8A29A, false);
+                }
+                this._box(g, W, 0.5, 0.6, 0, l * LH + LH - 0.25, side * (D / 2), 0x8D8780, false);
+            }
+        }
+        this._box(g, W + 0.6, 0.5, D + 0.6, 0, levels * LH + 0.25, 0, 0x7A746C);
+        // rooftop equipment + antenna
+        this._box(g, 4, 1.4, 3, -7, levels * LH + 1.2, -5, 0x9E9E9E, false);
+        this._cyl(g, 0.06, 0.06, 4, 8, levels * LH + 2.5, 5, 0x666666, 4);
+        // "P" sign
+        const ps = this._sign("P", "#FFFFFF", "#1565C0", 2, 2);
+        ps.position.set(W / 2 - 2, levels * LH + 1.6, D / 2 + 0.4);
+        g.add(ps);
+        // ramp stripe on ground floor front
+        this._box(g, 5, 0.1, 0.3, W / 2 - 3, 0.3, D / 2 + 0.2, 0xFDD835, false);
+        this._minimapLandmarks.push({ x, z, c: "#BDB8AE" });
+        this._placeGroup(g, x, z, 0, W + 2, levels * LH + 2, D + 2);
+    }
+
+    // ============================================================
+    // STREET FURNITURE — bins, hydrants, manholes, planters, trash,
+    // puddles and road damage (deterministic scatter along roads)
+    // ============================================================
+    placeStreetFurniture() {
+        const roads = this._roadPolylines;
+        this._hydrants = [];
+        let placedBins = 0, placedHydrants = 0;
+        for (let i = 0; i < roads.length && placedBins < 60; i++) {
+            const s = roads[i];
+            if (s.width <= 4) continue;
+            const dx = s.x2 - s.x1, dz = s.z2 - s.z1;
+            const len = Math.hypot(dx, dz);
+            const steps = Math.max(1, Math.floor(len / 40));
+            for (let k = 0; k < steps && placedBins < 60; k++) {
+                const t = (k + 0.5) / steps;
+                const px = s.x1 + dx * t, pz = s.z1 + dz * t;
+                const side = ((i + k) % 2) ? 1 : -1;
+                const ox = (-dz / len) * side * (s.width / 2 + 2.4);
+                const oz = (dx / len) * side * (s.width / 2 + 2.4);
+                const r = this._rand();
+                if (r < 0.45) {
+                    this._trashBin(px + ox, pz + oz);
+                    placedBins++;
+                } else if (r < 0.62 && placedHydrants < 22) {
+                    this._hydrant(px + ox, pz + oz);
+                    placedHydrants++;
+                } else if (r < 0.75) {
+                    this._manhole(px - ox * 0.4, pz - oz * 0.4);
+                } else if (r < 0.85) {
+                    this._puddle(px + ox, pz + oz);
+                } else {
+                    this._roadDamage(px - ox * 0.5, pz - oz * 0.5);
+                }
+            }
+        }
+        // litter clusters near commercial strip & plaza (deterministic jitter)
+        for (const [lx, lz] of [[140, -128], [165, -128], [0, -46], [-188, -132], [246, 40]]) {
+            for (let i = 0; i < 4; i++) {
+                const tr = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.24), this._mat([0xD7CCC8, 0xEF9A9A, 0xFFF59D, 0x90CAF9][i % 4]));
+                tr.position.set(lx + (this._rand() - 0.5) * 5, 0.075, lz + (this._rand() - 0.5) * 5);
+                tr.rotation.y = this._rand() * Math.PI;
+                this.scene.add(tr);
+            }
+        }
+        // bollards at plaza & mall entrances
+        for (const [bx, bz] of [[-8, -44], [8, -44], [-8, -66], [8, -66], [110, -80], [102, -80], [118, -80]]) {
+            const bo = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.9, 6), this._mat(0x546E7A));
+            bo.position.set(bx, 0.45, bz);
+            bo.castShadow = true;
+            this.scene.add(bo);
+        }
+    }
+
+    _trashBin(x, z) {
+        const g = new THREE.Group();
+        this._cyl(g, 0.32, 0.28, 0.9, 0, 0.45, 0, 0x2E5E3A, 8);
+        this._cyl(g, 0.36, 0.36, 0.08, 0, 0.94, 0, 0x1F4228, 8);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+
+    _hydrant(x, z) {
+        const g = new THREE.Group();
+        this._cyl(g, 0.16, 0.2, 0.75, 0, 0.38, 0, 0xC62828, 6);
+        this._cyl(g, 0.24, 0.24, 0.1, 0, 0.5, 0, 0xC62828, 6);
+        this._cyl(g, 0.1, 0.1, 0.5, 0, 0.85, 0, 0xE53935, 6);
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.12, 5, 4), this._mat(0xE53935));
+        cap.position.y = 1.05;
+        g.add(cap);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+        this._hydrants.push({ x, z });
+    }
+
+    _manhole(x, z) {
+        const mh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.04, 10), this._mat(0x4A4A4A));
+        mh.position.set(x, 0.075, z);
+        this.scene.add(mh);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.05, 4, 10), this._mat(0x333333));
+        ring.rotation.x = Math.PI / 2;
+        ring.position.set(x, 0.08, z);
+        this.scene.add(ring);
+    }
+
+    _puddle(x, z) {
+        const p = new THREE.Mesh(new THREE.CircleGeometry(0.7 + this._rand() * 0.8, 8),
+            new THREE.MeshLambertMaterial({ color: 0x5A7E96, transparent: true, opacity: 0.65 }));
+        p.rotation.x = -Math.PI / 2;
+        p.position.set(x, 0.075, z);
+        p.scale.y = 0.6;
+        this.scene.add(p);
+    }
+
+    _roadDamage(x, z) {
+        const patch = new THREE.Mesh(new THREE.CircleGeometry(0.9 + this._rand(), 7), this._mat(0x1c1c1c));
+        patch.rotation.x = -Math.PI / 2;
+        patch.position.set(x, 0.068, z);
+        patch.scale.set(1, 0.6 + this._rand() * 0.5, 1);
+        this.scene.add(patch);
+    }
+
+    // ============================================================
+    // UTILITIES — poles, power lines, transformers, utility boxes
+    // ============================================================
+    placeUtilityInfrastructure() {
+        const runs = [
+            [[-280, -86], [240, -86]],
+            [[-86, -270], [-86, 240]],
+            [[86, -270], [86, 160]],
+            [[-280, 86], [100, 86]]
+        ];
+        const poleMat = this._mat(0x6B5A44);
+        for (const [a, b] of runs) {
+            const dx = b[0] - a[0], dz = b[1] - a[1];
+            const len = Math.hypot(dx, dz);
+            const n = Math.max(2, Math.round(len / 42));
+            const pts = [];
+            for (let i = 0; i <= n; i++) {
+                const px = a[0] + dx * (i / n), pz = a[1] + dz * (i / n);
+                pts.push([px, pz]);
+                const g = new THREE.Group();
+                this._cyl(g, 0.09, 0.13, 7.5, 0, 3.75, 0, 0x6B5A44, 5);
+                this._box(g, 1.6, 0.1, 0.1, 0, 7.1, 0, 0x55462F, false);
+                this._box(g, 1.6, 0.1, 0.1, 0, 6.4, 0, 0x55462F, false);
+                g.position.set(px, 0, pz);
+                g.rotation.y = Math.atan2(dz, dx) + Math.PI / 2;
+                this.scene.add(g);
+                // transformer can on every third pole
+                if (i % 3 === 1 && i < n) {
+                    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.9, 6), this._mat(0x70757A));
+                    tr.position.set(px, 5.6, pz);
+                    this.scene.add(tr);
+                }
+            }
+            // sagging power lines between adjacent poles
+            for (let i = 0; i < pts.length - 1; i++) {
+                for (const hgt of [7.05, 6.35]) {
+                    this._powerLine(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], hgt, poleMat);
+                }
+            }
+        }
+        // ground utility boxes along sidewalks
+        for (const [ux, uz] of [[-30, 8.6], [30, -9.4], [8.6, -60], [-9.4, 100], [120, 8.6], [160, -9.4], [-120, 80.6], [46, 80.6]]) {
+            const g = new THREE.Group();
+            this._box(g, 1.4, 1.1, 0.8, 0, 0.55, 0, 0x8A9099);
+            this._box(g, 1.45, 0.08, 0.85, 0, 1.12, 0, 0x5F656D, false);
+            this._box(g, 0.9, 0.5, 0.05, 0, 0.6, 0.42, 0x6E757D, false);
+            g.position.set(ux, 0, uz);
+            g.rotation.y = this._rand() < 0.5 ? 0 : Math.PI / 2;
+            this.scene.add(g);
+        }
+        // drainage grates at low points of intersections
+        for (const [gx, gz] of [[-14, -14], [14, -14], [-14, 14], [14, 14], [0, -88], [0, 88], [-88, 0], [88, 0]]) {
+            const grate = new THREE.Mesh(new THREE.BoxGeometry(1, 0.05, 0.6), this._mat(0x3A3A3A));
+            grate.position.set(gx, 0.075, gz);
+            this.scene.add(grate);
+        }
+    }
+
+    _powerLine(x1, z1, x2, z2, h, mat) {
+        const segs = 6;
+        const curvePts = [];
+        for (let i = 0; i <= segs; i++) {
+            const t = i / segs;
+            const sag = Math.sin(t * Math.PI) * 0.55;
+            curvePts.push(new THREE.Vector3(x1 + (x2 - x1) * t, h - sag, z1 + (z2 - z1) * t));
+        }
+        const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curvePts), 8, 0.02, 3, false);
+        const line = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x222222 }));
+        this.scene.add(line);
+        void mat;
+    }
+
+    // ============================================================
+    // BILLBOARDS, ADVERTISING BOARDS, VENDING MACHINES, STORE AWNINGS
+    // ============================================================
+    placeBillboardsVending() {
+        const boards = [
+            ["VISIT OUTBOUND", 230, -200, -0.4], ["STEEL CITY GRILL", 150, -150, 0.3],
+            ["LAW FIRM: KANE", -240, -100, 1.2], ["UNIVERSITY ENROLL NOW", -270, 250, -1.4],
+            ["HARBOR FRESH FISH", 300, 120, -1.7], ["MEGA MALL SALE", 110, -110, 0]
+        ];
+        for (const [text, x, z, ry] of boards) {
+            const g = new THREE.Group();
+            const panel = this._sign(text, "#111111", "#FDF6E3", 12, 4.4);
+            panel.position.y = 9;
+            g.add(panel);
+            this._box(g, 12.4, 0.4, 0.4, 0, 11.3, 0, 0x555555, false);
+            this._box(g, 12.4, 0.4, 0.4, 0, 6.7, 0, 0x555555, false);
+            this._cyl(g, 0.22, 0.28, 7, -3.5, 3.5, 0, 0x666666, 6);
+            this._cyl(g, 0.22, 0.28, 7, 3.5, 3.5, 0, 0x666666, 6);
+            // ladder
+            this._box(g, 0.1, 6.5, 0.1, 0, 3.6, 0.5, 0x777777, false);
+            g.position.set(x, 0, z);
+            g.rotation.y = ry;
+            this.scene.add(g);
+        }
+        // advertising poster boards on sidewalks
+        for (const [x, z, ry] of [[-16, 84, 0], [16, -84, Math.PI], [84, 16, Math.PI / 2], [-84, -16, -Math.PI / 2]]) {
+            const g = new THREE.Group();
+            this._cyl(g, 0.08, 0.08, 2.6, -0.8, 1.3, 0, 0x555555, 5);
+            this._cyl(g, 0.08, 0.08, 2.6, 0.8, 1.3, 0, 0x555555, 5);
+            this._box(g, 2.2, 2.6, 0.12, 0, 1.7, 0, 0x263238, false);
+            const art = this._sign(["JAZZ NIGHTS", "CAR WASH $5", "VOTE KANE", "FOOD FEST"][Math.floor(this._rand() * 4)], "#FFD54F", "#263238", 1.9, 2.3);
+            art.position.set(0, 1.7, 0.08);
+            g.add(art);
+            g.position.set(x, 0, z);
+            g.rotation.y = ry;
+            this.scene.add(g);
+        }
+        // vending machines beside mall, hospital, depot entrances
+        for (const [x, z, ry] of [[122, -82, 0], [-160, -66, Math.PI / 2], [255, -126, Math.PI]]) {
+            const g = new THREE.Group();
+            this._box(g, 1, 1.9, 0.7, 0, 0.95, 0, 0xB71C1C);
+            this._box(g, 0.75, 1.1, 0.05, -0.05, 1.25, 0.36, 0x8EC8E8, false);
+            this._box(g, 0.3, 0.25, 0.06, 0.3, 0.5, 0.36, 0x222222, false);
+            g.position.set(x, 0, z);
+            g.rotation.y = ry;
+            this.scene.add(g);
+        }
+    }
+
+    // ============================================================
+    // PARKED VEHICLES — cars, vans, buses, motorcycles, trailers
+    // placed at fixed lots/streets so streets feel lived-in.
+    // ============================================================
+    placeParkedVehicles() {
+        const spots = [
+            // mall lot
+            [100, -140, 0], [106, -140, 0], [112, -140, 0], [118, -140, 0], [124, -140, 0],
+            [100, -130, Math.PI], [112, -130, Math.PI], [124, -130, Math.PI],
+            // stadium lots
+            [22, 150, Math.PI / 2], [30, 150, Math.PI / 2], [38, 150, Math.PI / 2],
+            [-38, 150, -Math.PI / 2], [-22, 150, -Math.PI / 2],
+            // downtown curb parking (parallel)
+            [-40, -10, 0], [-52, -10, 0], [30, 10, Math.PI], [42, 10, Math.PI],
+            [-10, 40, Math.PI / 2], [-10, 55, Math.PI / 2], [10, -40, -Math.PI / 2],
+            // alley service vehicles + dumpsters already nearby
+            [-60, -20, 0], [60, 20, Math.PI],
+            // waterfront lot
+            [242, 54, Math.PI / 2], [250, 54, Math.PI / 2], [242, 66, Math.PI / 2],
+            // suburban driveways (every 3rd lot)
+            [-200, -53], [-190, -163], [115, -208], [-215, 103], [150, 192],
+            // depot buses
+            [248, -126, 0], [258, -126, 0],
+            // motorcycle cluster by cafe & plaza
+            [30, 66, 0.4], [33, 66, 0.5], [-6, -50, 1.2], [6, -50, 1.4]
+        ];
+        const palette = [0x3D6FB4, 0xC0392B, 0x2E7D32, 0xE8B800, 0xF5F5F5, 0x455A64, 0x8D6E63, 0xAB47BC];
+        let pi = 0;
+        for (const [x, z, ry] of spots) {
+            const isBus = z === -126 && x > 240;
+            const isMoto = x === 30 || x === 33 || x === -6 || x === 6;
+            if (isBus) {
+                const g = new THREE.Group();
+                this._busMesh(g, 0, 0, 0, ry || 0);
+                g.position.set(x, 0, z);
+                this.scene.add(g);
+                this._addCollider(x, z, 9, 3, 2.6);
+                continue;
+            }
+            if (Math.abs(x) > 0 && isMoto) {
+                this._motorcycle(x, z, ry, palette[pi++ % palette.length]);
+                continue;
+            }
+            this._parkedCar(x, z, typeof ry === "number" ? ry : 0, palette[pi++ % palette.length]);
+        }
+        // delivery vans at storefronts & loading zones
+        this._deliveryVan(136, -128, 0);
+        this._deliveryVan(196, -128, 0);
+        this._deliveryVan(210, 66, Math.PI / 2);
+        this._deliveryVan(-150, 66, Math.PI);
+        // tow-truck & tanker at industrial junction
+        this._tankerTruck(232, 34, -Math.PI / 2);
+        // trailer parked in depot yard
+        const tr = new THREE.Group();
+        this._box(tr, 12, 3, 3, 0, 1.8, 0, 0xECEFF1);
+        this._cyl(tr, 0.55, 0.55, 0.3, -3, 0.55, 1.5, 0x151515, 8).rotation.z = Math.PI / 2;
+        this._cyl(tr, 0.55, 0.55, 0.3, 3, 0.55, 1.5, 0x151515, 8).rotation.z = Math.PI / 2;
+        tr.position.set(270, 0, -150);
+        tr.rotation.y = 0.3;
+        this.scene.add(tr);
+        this._addCollider(270, -150, 12, 3.5, 3.5);
+    }
+
+    _parkedCar(x, z, ry, color) {
+        const g = new THREE.Group();
+        this._box(g, 2, 0.55, 4.5, 0, 0.55, 0, color);
+        this._box(g, 1.75, 0.55, 2.1, 0, 1.1, 0.2, 0x1a2a35);
+        this._box(g, 0.3, 0.1, 0.06, -0.6, 0.55, -2.28, 0xffffee, false);
+        this._box(g, 0.3, 0.1, 0.06, 0.6, 0.55, -2.28, 0xffffee, false);
+        this._box(g, 0.35, 0.1, 0.06, -0.6, 0.55, 2.28, 0xcc2222, false);
+        this._box(g, 0.35, 0.1, 0.06, 0.6, 0.55, 2.28, 0xcc2222, false);
+        for (const [wx, wz] of [[-0.95, -1.4], [0.95, -1.4], [-0.95, 1.4], [0.95, 1.4]]) {
+            const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.22, 8), this._mat(0x151515));
+            wh.rotation.z = Math.PI / 2;
+            wh.position.set(wx, 0.34, wz);
+            g.add(wh);
+        }
+        g.position.set(x, 0.02, z);
+        g.rotation.y = ry;
+        this.scene.add(g);
+        this._addCollider(x, z, 2.4, 1.6, 4.9);
+    }
+
+    _motorcycle(x, z, ry, color) {
+        const g = new THREE.Group();
+        this._box(g, 0.35, 0.4, 1.6, 0, 0.75, 0, color);
+        this._box(g, 0.3, 0.25, 0.6, 0, 1.05, -0.3, 0x212121, false);
+        for (const wz of [-0.75, 0.75]) {
+            const wh = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.07, 5, 10), this._mat(0x111111));
+            wh.rotation.y = Math.PI / 2;
+            wh.position.set(0, 0.32, wz);
+            g.add(wh);
+        }
+        this._box(g, 0.5, 0.05, 0.12, 0, 1.05, -0.75, 0x999999, false);
+        g.position.set(x, 0.02, z);
+        g.rotation.y = ry;
+        this.scene.add(g);
+        this._addCollider(x, z, 0.9, 1.4, 1.9);
+    }
+
+    _deliveryVan(x, z, ry) {
+        const g = new THREE.Group();
+        this._box(g, 2.1, 1.1, 4.6, 0, 0.85, 0, 0xF5F5F5);
+        this._box(g, 2.1, 1.6, 2.6, 0, 2.1, -0.9, 0xF5F5F5);
+        this._box(g, 1.9, 0.8, 0.1, 0, 1.9, 0.45, 0x223344, false);
+        const s = this._sign("EXPRESS", "#FFFFFF", "#1565C0", 3.6, 0.8);
+        s.position.set(0, 2.3, 2.32);
+        g.add(s);
+        for (const [wx, wz] of [[-1, -1.4], [1, -1.4], [-1, 1.5], [1, 1.5]]) {
+            const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.22, 8), this._mat(0x151515));
+            wh.rotation.z = Math.PI / 2;
+            wh.position.set(wx, 0.4, wz);
+            g.add(wh);
+        }
+        g.position.set(x, 0.02, z);
+        g.rotation.y = ry;
+        this.scene.add(g);
+        this._addCollider(x, z, 2.6, 3.6, 5);
+    }
+
+    _tankerTruck(x, z, ry) {
+        const g = new THREE.Group();
+        this._box(g, 2.4, 1.6, 2.2, 0, 1.2, -2.6, 0xB0BEC5);
+        this._box(g, 2.2, 1.2, 1, 0, 1.4, -1.2, 0x223344, false);
+        const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 6.4, 10), this._mat(0xE0E0E0));
+        tank.rotation.x = Math.PI / 2;
+        tank.position.set(0, 1.5, 1.6);
+        g.add(tank);
+        const s = this._sign("FUEL", "#37474F", "#E0E0E0", 2.4, 0.8);
+        s.position.set(0, 2.8, 1.6);
+        g.add(s);
+        for (const [wx, wz] of [[-1.2, -2.4], [1.2, -2.4], [-1.2, 1], [1.2, 1], [-1.2, 3.4], [1.2, 3.4]]) {
+            const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.25, 8), this._mat(0x151515));
+            wh.rotation.z = Math.PI / 2;
+            wh.position.set(wx, 0.55, wz);
+            g.add(wh);
+        }
+        g.position.set(x, 0.02, z);
+        g.rotation.y = ry;
+        this.scene.add(g);
+        this._addCollider(x, z, 3, 4, 9);
+    }
+
+    // ============================================================
+    // CONSTRUCTION SITES — barriers, excavator, materials, half-built block
+    // ============================================================
+    placeConstructionSites() {
+        this._constructionSite(-60, 175, 30, 24);
+        this._constructionSite(235, -100, 26, 20);
+        this._constructionSite(-250, 60, 24, 18);
+    }
+
+    _constructionSite(x, z, w, d) {
+        // dirt pad
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), this._mat(0x8C6E4F));
+        pad.position.set(x, 0.03, z);
+        pad.receiveShadow = true;
+        this.scene.add(pad);
+        // barrier perimeter with hazard stripes
+        const per = [[x, z - d / 2, w, 0], [x, z + d / 2, w, 0], [x - w / 2, z, d, Math.PI / 2], [x + w / 2, z, d, Math.PI / 2]];
+        for (const [bx, bz, blen, brot] of per) {
+            for (let i = 0; i < Math.floor(blen / 2.4); i++) {
+                const off = -blen / 2 + i * 2.4 + 1.2;
+                const bar = new THREE.Group();
+                this._box(bar, 2.2, 0.14, 0.14, 0, 1.0, 0, i % 2 ? 0xF57F17 : 0xECEFF1, false);
+                this._box(bar, 0.1, 1.0, 0.1, -1, 0.5, 0, 0x555555, false);
+                this._box(bar, 0.1, 1.0, 0.1, 1, 0.5, 0, 0x555555, false);
+                bar.position.set(brot === 0 ? x + off : bx, 0, brot === 0 ? bz : z + off);
+                bar.rotation.y = brot;
+                this.scene.add(bar);
+            }
+        }
+        // half-built skeleton
+        const sk = new THREE.Group();
+        for (const lx of [-w / 4, 0, w / 4]) {
+            this._cyl(sk, 0.25, 0.3, 9, lx, 4.5, -d / 4, 0x9E9E9E, 5);
+            this._cyl(sk, 0.25, 0.3, 9, lx, 4.5, d / 6, 0x9E9E9E, 5);
+        }
+        this._box(sk, w / 2, 0.4, d / 2, 0, 5, 0, 0xB0B0B0);
+        this._box(sk, w / 2, 0.4, d / 2, 0, 9.2, 0, 0xBDBDBD);
+        sk.position.set(x - 3, 0, z);
+        this.scene.add(sk);
+        this._addCollider(x - 3, z, w / 2, 10, d / 2);
+        // excavator
+        const ex = new THREE.Group();
+        this._box(ex, 2.2, 0.6, 3.2, 0, 0.5, 0, 0xF9A825);
+        this._box(ex, 1.4, 1.2, 1.4, -0.2, 1.4, 0.4, 0x37474F);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 3.4), this._mat(0xF9A825));
+        arm.position.set(0.9, 2.2, -1.4);
+        arm.rotation.x = 0.6;
+        ex.add(arm);
+        const bucket = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), this._mat(0x555555));
+        bucket.position.set(0.9, 1.1, -2.9);
+        ex.add(bucket);
+        ex.position.set(x + w / 3, 0, z + d / 3);
+        ex.rotation.y = -0.7;
+        this.scene.add(ex);
+        // stacked materials: pipes, pallets, rebar, cement bags
+        for (let i = 0; i < 3; i++) {
+            const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 5, 6), this._mat(0x777777));
+            pipe.rotation.z = Math.PI / 2;
+            pipe.position.set(x - w / 3, 0.25 + i * 0.45, z - d / 3 + i * 0.1);
+            this.scene.add(pipe);
+        }
+        const pal = new THREE.Group();
+        this._box(pal, 1.6, 0.12, 1.2, 0, 0.1, 0, 0x8D6E4C, false);
+        this._box(pal, 1.4, 0.7, 1, 0, 0.5, 0, 0xB0BEC5, false);
+        pal.position.set(x + w / 4, 0, z - d / 3);
+        this.scene.add(pal);
+        for (let i = 0; i < 4; i++) {
+            const bag = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 0.45), this._mat(0xD7CCC8));
+            bag.position.set(x - w / 4 + (i % 2) * 0.75, 0.18 + Math.floor(i / 2) * 0.36, z + d / 3);
+            this.scene.add(bag);
+        }
+        // portable toilet + site container office
+        const wc = new THREE.Group();
+        this._box(wc, 1.1, 2.1, 1.1, 0, 1.05, 0, 0x1B5E20);
+        this._box(wc, 0.4, 0.1, 0.4, 0, 2.2, 0, 0x144218, false);
+        wc.position.set(x + w / 2 - 2, 0, z + d / 2 - 2);
+        this.scene.add(wc);
+        const office = new THREE.Group();
+        this._box(office, 6, 2.6, 2.6, 0, 1.3, 0, 0xECEFF1);
+        this._box(office, 1.2, 1.4, 0.1, -1.5, 1.2, 1.35, 0x90CAF9, false);
+        office.position.set(x - w / 2 + 4, 0, z + d / 2 - 2);
+        this.scene.add(office);
+        this._addCollider(x - w / 2 + 4, z + d / 2 - 2, 6.5, 3, 3);
+        this._minimapLandmarks.push({ x, z, c: "#F9A825" });
+    }
+
+    // ============================================================
+    // COUNTRYSIDE TRANSITION — farms, barns, dirt paths, fields, creek
+    // ============================================================
+    placeCountryside() {
+        // Dirt farm tracks radiating from the city edges
+        const dirtMat = new THREE.MeshLambertMaterial({ color: 0xA37B52, flatShading: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+        const tracks = [
+            [[-300, -260], [-420, -320], [-500, -300]],
+            [[-300, 260], [-420, 300], [-500, 380]],
+            [[300, 300], [380, 380], [460, 420]],
+            [[-100, -300], [-80, -400], [-120, -480]]
+        ];
+        for (const path of tracks) {
+            for (let i = 0; i < path.length - 1; i++) {
+                const [x1, z1] = path[i], [x2, z2] = path[i + 1];
+                const dx = x2 - x1, dz = z2 - z1;
+                const len = Math.hypot(dx, dz);
+                const seg = new THREE.Mesh(new THREE.BoxGeometry(len, 0.05, 5), dirtMat);
+                seg.position.set((x1 + x2) / 2, 0.02, (z1 + z2) / 2);
+                seg.rotation.y = -Math.atan2(dz, dx);
+                seg.receiveShadow = true;
+                this.scene.add(seg);
+                this._roadPolylines.push({ x1, z1, x2, z2, width: 5 });
+            }
+        }
+        // Farmstead NW: barn + silo + farmhouse + fenced fields
+        this._farm(-420, -360, 0.3);
+        this._farm(-460, 340, -0.5);
+        this._farm(400, 430, 0.8);
+        // Pasture fences + hay rolls along tracks
+        for (const [hx, hz] of [[-380, -330], [-440, -300], [-400, 320], [420, 400]]) {
+            const hay = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 1.6, 8), this._mat(0xD8B84C));
+            hay.rotation.z = Math.PI / 2;
+            hay.position.set(hx, 1.1, hz);
+            hay.castShadow = true;
+            this.scene.add(hay);
+        }
+        // grazing herd markers (simple cows)
+        for (const [cx2, cz] of [[-430, -340], [-445, -352], [-418, -355]]) this._cow(cx2, cz, this._rand() * Math.PI);
+        // Creek winding SW countryside into the river
+        const creekPts = [];
+        for (let i = 0; i <= 12; i++) {
+            const t = i / 12;
+            creekPts.push([-500 + t * 200 + Math.sin(t * 6) * 18, 320 + t * 60]);
+        }
+        for (let i = 0; i < creekPts.length - 1; i++) {
+            const [x1, z1] = creekPts[i], [x2, z2] = creekPts[i + 1];
+            const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz);
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(len, 0.06, 4), new THREE.MeshLambertMaterial({ color: 0x3A9BD9, transparent: true, opacity: 0.8 }));
+            seg.position.set((x1 + x2) / 2, -0.4, (z1 + z2) / 2);
+            seg.rotation.y = -Math.atan2(dz, dx);
+            this.scene.add(seg);
+        }
+        // small wooden footbridge over creek
+        const fb = new THREE.Group();
+        this._box(fb, 7, 0.25, 2.6, 0, 0.3, 0, 0x8B4513);
+        this._box(fb, 7, 0.6, 0.12, 0, 0.7, 1.2, 0x6B4423, false);
+        this._box(fb, 7, 0.6, 0.12, 0, 0.7, -1.2, 0x6B4423, false);
+        fb.position.set(-430, 0, 348);
+        fb.rotation.y = 0.35;
+        this.scene.add(fb);
+        // windmill on the ridge (east countryside)
+        const wm = new THREE.Group();
+        this._cyl(wm, 0.5, 1.2, 16, 0, 8, 0, 0xECEFF1, 6);
+        const hub = new THREE.Group();
+        hub.position.set(0, 16.4, 1);
+        for (let i = 0; i < 3; i++) {
+            const blade = new THREE.Mesh(new THREE.BoxGeometry(0.4, 7, 0.12), this._mat(0xFAFAFA));
+            blade.position.y = 3.5;
+            const holder = new THREE.Group();
+            holder.rotation.z = (i / 3) * Math.PI * 2;
+            holder.add(blade);
+            hub.add(holder);
+        }
+        wm.add(hub);
+        wm.position.set(430, this.getTerrainHeight(430, 240), 240);
+        this.scene.add(wm);
+        this._windmillHub = hub;
+        this._addCollider(430, 240, 3, 18, 3);
+        this._minimapLandmarks.push({ x: 430, z: 240, c: "#ECEFF1" });
+        // rural mailboxes + cattle grid details along tracks
+        for (const [mx, mz] of [[-320, -268], [-330, 268], [320, 320]]) {
+            const mb = new THREE.Group();
+            this._cyl(mb, 0.06, 0.06, 1.4, 0, 0.7, 0, 0x6B5A44, 4);
+            this._box(mb, 0.5, 0.35, 0.25, 0, 1.5, 0, 0x37474F, false);
+            mb.position.set(mx, this.getTerrainHeight(mx, mz), mz);
+            this.scene.add(mb);
+        }
+    }
+
+    _farm(x, z, rot) {
+        const gy = this.getTerrainHeight(x, z);
+        const g = new THREE.Group();
+        // barn
+        this._box(g, 14, 7, 9, 0, 3.5, 0, 0xA83A2C);
+        const barnRoof = new THREE.Mesh(new THREE.CylinderGeometry(5.2, 5.2, 14.4, 8, 1, false, 0, Math.PI), this._mat(0x6D6660));
+        barnRoof.rotation.z = Math.PI / 2;
+        barnRoof.rotation.y = Math.PI / 2;
+        barnRoof.position.y = 7;
+        g.add(barnRoof);
+        this._box(g, 3.4, 4.5, 0.2, 0, 2.2, 4.6, 0xF5F0E6, false); // big doors
+        this._box(g, 0.2, 4.5, 3.4, -1.8, 2.2, 0, 0xF5F0E6, false);
+        // farmhouse
+        this._box(g, 8, 4, 6, 14, 2, 6, 0xF2EAD8);
+        const fr = new THREE.Mesh(new THREE.ConeGeometry(5.6, 2.4, 4), this._mat(0x7A4A2B));
+        fr.position.set(14, 5.2, 6);
+        fr.rotation.y = Math.PI / 4;
+        g.add(fr);
+        // silo
+        this._cyl(g, 2, 2, 11, -10, 5.5, 6, 0xC8CDD2, 10);
+        const scap = new THREE.Mesh(new THREE.SphereGeometry(2.1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), this._mat(0x9AA0A6));
+        scap.position.set(-10, 11, 6);
+        g.add(scap);
+        // fenced pasture
+        g.position.set(x, gy, z);
+        g.rotation.y = rot;
+        this.scene.add(g);
+        this._addCollider(x, z, 16, 9, 11);
+        this._minimapLandmarks.push({ x, z, c: "#A83A2C" });
+        // wheat field patch nearby
+        const field = new THREE.Group();
+        const fw = 40, fd = 30;
+        const base = new THREE.Mesh(new THREE.BoxGeometry(fw, 0.06, fd), this._mat(0xC9A84C));
+        base.position.set(x + 40, gy + 0.03, z - 30);
+        base.receiveShadow = true;
+        this.scene.add(base);
+        for (let i = 0; i < 90; i++) {
+            const stalk = new THREE.Mesh(new THREE.ConeGeometry(0.12, 1.1, 3), this._mat(0xD8B84C));
+            stalk.position.set(x + 40 + (this._rand() - 0.5) * (fw - 3), gy + 0.6, z - 30 + (this._rand() - 0.5) * (fd - 3));
+            field.add(stalk);
+        }
+        this.scene.add(field);
+    }
+
+    _cow(x, z, rot) {
+        const g = new THREE.Group();
+        this._box(g, 1.6, 0.9, 0.8, 0, 0.75, 0, 0xFAFAFA);
+        this._box(g, 0.5, 0.4, 0.4, 0.9, 0.9, 0, 0xFAFAFA, false);
+        this._box(g, 0.5, 0.35, 0.85, -0.3, 0.8, 0, 0x4E342E, false);
+        for (const [lx, lz] of [[-0.55, -0.3], [-0.55, 0.3], [0.55, -0.3], [0.55, 0.3]]) {
+            this._box(g, 0.14, 0.35, 0.14, lx, 0.18, lz, 0x4E342E, false);
+        }
+        g.position.set(x, this.getTerrainHeight(x, z), z);
+        g.rotation.y = rot;
+        this.scene.add(g);
+    }
+
+    // ============================================================
+    // OUTSKIRTS FOREST BELTS — deliberate planted belts (not scatter)
+    // ============================================================
+    placeOutskirtsForest() {
+        // Forest belts framing the city transitions (fixed belt corridors)
+        const belts = [
+            { x0: -340, z0: -120, x1: -340, z1: 260, n: 26, spread: 34 },   // west belt
+            { x0: -320, z0: 300, x1: -120, z1: 300, n: 18, spread: 26 },    // south belt
+            { x0: -40, z0: 310, x1: 160, z1: 310, n: 14, spread: 22 },      // south belt 2
+            { x0: -340, z0: -320, x1: -60, z1: -330, n: 20, spread: 30 },   // north tree line
+            { x0: 320, z0: -320, x1: 460, z1: -260, n: 16, spread: 26 }     // NE foothills
+        ];
+        for (const b of belts) {
+            for (let i = 0; i < b.n; i++) {
+                const t = i / (b.n - 1);
+                const x = b.x0 + (b.x1 - b.x0) * t + (this._rand() - 0.5) * b.spread;
+                const z = b.z0 + (b.z1 - b.z0) * t + (this._rand() - 0.5) * b.spread;
+                const y = this.getTerrainHeight(x, z);
+                if (y < -0.5) continue;
+                if (this._rand() < 0.65) this._pine(x, z);
+                else this._deciduous(x, z);
+            }
+        }
+        // Orchard rows (deliberate plantation, SW outskirts)
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 8; c++) {
+                const x = -460 + c * 9, z = 120 + r * 9;
+                this._deciduous(x, z, 0.8);
+            }
+        }
+        // Rocks & boulders accent along forest edges
+        for (const [rx, rz, s] of [[-350, -200, 1.6], [-360, 60, 2.2], [-300, 320, 1.8], [340, -300, 2.4], [380, 300, 1.5]]) {
+            const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), this._mat(0x808080));
+            rock.position.set(rx, this.getTerrainHeight(rx, rz) + s * 0.4, rz);
+            rock.rotation.set(this._rand(), this._rand(), this._rand());
+            rock.castShadow = true;
+            this.scene.add(rock);
+        }
+    }
+
+    _deciduous(x, z, scale = 1) {
+        const g = new THREE.Group();
+        this._cyl(g, 0.22, 0.32, 2.6 * scale, 0, 1.3 * scale, 0, 0x6B4A2B, 5);
+        const greens = [0x66A03C, 0x7CB342, 0x8BC34A];
+        for (let i = 0; i < 3; i++) {
+            const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(1.5 * scale - i * 0.25, 0), this._mat(greens[i % 3]));
+            blob.position.set((i - 1) * 0.7 * scale, (2.8 + i * 0.55) * scale, (i % 2 ? 0.5 : -0.4) * scale);
+            blob.castShadow = true;
+            g.add(blob);
+        }
+        const gy = this.getTerrainHeight(x, z);
+        g.position.set(x, gy, z);
+        this.scene.add(g);
+    }
+
+    // ============================================================
+    // BRIDGES & OVERPASS — second river bridge + grade-separated interchange
+    // ============================================================
+    placeBridgesOverpasses() {
+        const RX = this.terrain.RIVER_X;
+        // Second (arch) road bridge carrying campus→stadium corridor across river at z=150? Keep clear of harbor: use z=-120 link
+        this.addRoadSeg(220, -120, RX - 8, -120, 10);
+        this.createArchBridge(RX - 8, -120, RX + 62, -120, 10);
+        this.addRoadSeg(RX + 62, -120, RX + 120, -120, 10);
+        // Pedestrian footbridge near harbor promenade
+        this._footBridge(RX + 12, 250, RX + 70, 250);
+        // Highway overpass where N-S avenue crosses E-W expressway is at-grade;
+        // build a grade separator on the west connector instead:
+        this._overpass(-240, -40);
+    }
+
+    createArchBridge(x1, z1, x2, z2, width) {
+        const len = x2 - x1;
+        const cx = (x1 + x2) / 2;
+        const deckMat = this._mat(0xC9C4BA);
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(len, 0.5, width), deckMat);
+        deck.position.set(cx, 1.6, z1);
+        deck.castShadow = true;
+        deck.receiveShadow = true;
+        this.scene.add(deck);
+        // arch ribs
+        for (const side of [-1, 1]) {
+            const pts = [];
+            for (let i = 0; i <= 10; i++) {
+                const t = i / 10;
+                pts.push(new THREE.Vector3(x1 + len * t, 1.6 + Math.sin(t * Math.PI) * 6, z1 + side * (width / 2 + 0.3)));
+            }
+            const rib = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 14, 0.28, 5, false), this._mat(0xB0492E));
+            rib.castShadow = true;
+            this.scene.add(rib);
+            // hangers
+            for (let i = 1; i < 10; i++) {
+                const t = i / 10;
+                const top = 1.6 + Math.sin(t * Math.PI) * 6;
+                const hang = new THREE.Mesh(new THREE.BoxGeometry(0.08, top - 1.8, 0.08), this._mat(0x8D8D8D));
+                hang.position.set(x1 + len * t, (top + 1.8) / 2, z1 + side * (width / 2 + 0.3));
+                this.scene.add(hang);
+            }
+        }
+        // railings + lamp posts on deck
+        for (const side of [-1, 1]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.1, 0.12), this._mat(0x9E9E9E));
+            rail.position.set(cx, 2.7, z1 + side * (width / 2 - 0.2));
+            this.scene.add(rail);
+        }
+        for (let i = 0; i <= 4; i++) {
+            const px = x1 + (len * i) / 4;
+            const lp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 2.2, 5), this._mat(0x444444));
+            lp.position.set(px, 2.9, z1 + (i % 2 ? width / 2 - 0.3 : -width / 2 + 0.3));
+            this.scene.add(lp);
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.14, 5, 4), new THREE.MeshBasicMaterial({ color: 0xffe08a }));
+            bulb.position.copy(lp.position);
+            bulb.position.y += 1.2;
+            this.scene.add(bulb);
+        }
+        // register in road graph (deck height handled by flat city zone)
+        this._roadPolylines.push({ x1, z1, x2, z2, width });
+        this._minimapLandmarks.push({ x: cx, z: z1, c: "#B0492E" });
+    }
+
+    _footBridge(x1, z1, x2, z2) {
+        const len = x2 - x1, cx = (x1 + x2) / 2;
+        const deck = new THREE.Mesh(new THREE.BoxGeometry(len, 0.25, 3), this._mat(0x8D6E4C));
+        deck.position.set(cx, 1.2, z1);
+        deck.castShadow = true;
+        this.scene.add(deck);
+        for (const side of [-1, 1]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 0.9, 0.08), this._mat(0x607D8B));
+            rail.position.set(cx, 1.8, z1 + side * 1.4);
+            this.scene.add(rail);
+        }
+        for (const px of [x1 + 4, x2 - 4]) {
+            for (const side of [-1, 1]) {
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 2.6, 5), this._mat(0x455A64));
+                post.position.set(px, 0.4, z1 + side * 1.4);
+                this.scene.add(post);
+            }
+        }
+    }
+
+    _overpass(x, z) {
+        // Elevated ramp crossing the E-W expressway: helical on-ramp + deck beam
+        const deckY = 6.5;
+        const rampPts = [];
+        for (let i = 0; i <= 16; i++) {
+            const t = i / 16;
+            const a = Math.PI * 1.5 + t * Math.PI * 1.2;
+            const r = 26;
+            rampPts.push([x + Math.cos(a) * r, z + Math.sin(a) * r]);
+        }
+        for (let i = 0; i < rampPts.length - 1; i++) {
+            const [x1, z1] = rampPts[i], [x2, z2] = rampPts[i + 1];
+            const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz);
+            const t0 = i / rampPts.length, t1 = (i + 1) / rampPts.length;
+            const y0 = 0.4 + t0 * deckY, y1 = 0.4 + t1 * deckY;
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(len, 0.5, 9), this._mat(0x9E9891));
+            seg.position.set((x1 + x2) / 2, (y0 + y1) / 2, (z1 + z2) / 2);
+            seg.rotation.y = -Math.atan2(dz, dx);
+            seg.rotation.z = Math.atan2(y1 - y0, len);
+            seg.castShadow = true;
+            this.scene.add(seg);
+            // guardrails
+            const gr = new THREE.Mesh(new THREE.BoxGeometry(len, 0.7, 0.15), this._mat(0xCFD8DC));
+            gr.position.copy(seg.position);
+            gr.rotation.copy(seg.rotation);
+            gr.translateZ(4.4);
+            this.scene.add(gr);
+            const gr2 = gr.clone();
+            gr2.translateZ(-8.8);
+            this.scene.add(gr2);
+            // piers
+            if (i % 3 === 0) {
+                const pier = new THREE.Mesh(new THREE.BoxGeometry(1.2, y0 + 0.5, 1.2), this._mat(0x8D8780));
+                pier.position.set(x1, (y0 + 0.5) / 2 - 0.5, z1);
+                this.scene.add(pier);
+            }
+        }
+        // merge deck straight onto the expressway east end of ramp
+        const end = rampPts[rampPts.length - 1];
+        const top = new THREE.Mesh(new THREE.BoxGeometry(30, 0.5, 9), this._mat(0x9E9891));
+        top.position.set(end[0] + 15, deckY + 0.4, end[1]);
+        top.castShadow = true;
+        this.scene.add(top);
+        const pier2 = new THREE.Mesh(new THREE.BoxGeometry(1.4, deckY + 1, 1.4), this._mat(0x8D8780));
+        pier2.position.set(end[0] + 22, (deckY + 1) / 2 - 0.5, end[1]);
+        this.scene.add(pier2);
+        // sign gantry under the overpass
+        const gan = new THREE.Group();
+        this._cyl(gan, 0.12, 0.12, 5.5, -4, 2.75, 0, 0x555555, 5);
+        this._cyl(gan, 0.12, 0.12, 5.5, 4, 2.75, 0, 0x555555, 5);
+        const plate = this._sign("CITY CENTER →", "#FFFFFF", "#1B5E20", 7.5, 1.4);
+        plate.position.set(0, 5.2, 0);
+        gan.add(plate);
+        gan.position.set(x + 30, 0, z + 14);
+        gan.rotation.y = 0.2;
+        this.scene.add(gan);
+    }
+
     createWildernessTrees() {
         // Far forest only (west / mountains) — instanced, low count
         const positions = [];
@@ -5808,13 +8646,16 @@ class World {
     }
 
     createSky() {
+        // Stylized multi-band sunset sky dome (procedural, driven by DayNightCycle uniforms)
         const skyGeo = new THREE.SphereGeometry(1500, 16, 16);
         const skyMat = new THREE.ShaderMaterial({
             uniforms: {
-                topColor: { value: new THREE.Color(0x4488cc) },
-                bottomColor: { value: new THREE.Color(0xaaccee) },
-                offset: { value: 20 },
-                exponent: { value: 0.4 },
+                uTop:      { value: new THREE.Color(0x1d3a7a) }, // deep blue upper sky
+                uMid:      { value: new THREE.Color(0x7a5aa0) }, // blue-violet transition
+                uHorizon:  { value: new THREE.Color(0xff9a4d) }, // warm orange horizon
+                uSunDir:   { value: new THREE.Vector3(0.4, 0.15, -0.9) },
+                uSunsetMix:{ value: 0.0 },
+                uNightMix: { value: 0.0 },
             },
             vertexShader: `
                 varying vec3 vWorldPosition;
@@ -5825,20 +8666,66 @@ class World {
                 }
             `,
             fragmentShader: `
-                uniform vec3 topColor;
-                uniform vec3 bottomColor;
-                uniform float offset;
-                uniform float exponent;
+                uniform vec3 uTop;
+                uniform vec3 uMid;
+                uniform vec3 uHorizon;
+                uniform vec3 uSunDir;
+                uniform float uSunsetMix;
+                uniform float uNightMix;
                 varying vec3 vWorldPosition;
                 void main() {
-                    float h = normalize(vWorldPosition + offset).y;
-                    gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+                    vec3 dir = normalize(vWorldPosition);
+                    float h = clamp(dir.y, -0.05, 1.0);
+                    // Three-band vertical gradient: horizon -> violet mid -> deep blue top
+                    vec3 col = mix(uHorizon, uMid, smoothstep(0.0, 0.30, h));
+                    col = mix(col, uTop, smoothstep(0.22, 0.75, h));
+                    // Golden band + sun glow near the sun direction (strongest at sunset)
+                    float sunAmt = max(dot(dir, normalize(uSunDir)), 0.0);
+                    float band = pow(clamp(1.0 - abs(dir.y) * 3.2, 0.0, 1.0), 2.0);
+                    vec3 gold = vec3(1.0, 0.78, 0.38);
+                    col += gold * pow(sunAmt, 12.0) * 0.9 * uSunsetMix;         // tight sun glow
+                    col += mix(vec3(1.0,0.45,0.30), gold, 0.5) * band * sunAmt * 0.55 * uSunsetMix; // wide horizon glow
+                    // Night: darken toward a deep indigo, keep faint starless gradient
+                    col = mix(col, vec3(0.03, 0.04, 0.10) + uTop * 0.10, uNightMix * smoothstep(-0.05, 0.35, h));
+                    // Below-horizon fade to fog color for seamless blend with terrain fog
+                    col = mix(uHorizon * 0.55, col, smoothstep(-0.04, 0.06, dir.y));
+                    gl_FragColor = vec4(col, 1.0);
                 }
             `,
             side: THREE.BackSide,
+            depthWrite: false,
         });
         const sky = new THREE.Mesh(skyGeo, skyMat);
+        sky.renderOrder = -10;
         this.scene.add(sky);
+        this.skyMaterial = skyMat;
+
+        // Large readable stylized sun disk + layered halo billboard (faces camera automatically)
+        const sunDiscMat = new THREE.SpriteMaterial({
+            color: 0xffe9b0, transparent: true, opacity: 0.95, depthWrite: false, fog: false
+        });
+        const sunDisc = new THREE.Sprite(sunDiscMat);
+        sunDisc.scale.set(55, 55, 1);
+        this.scene.add(sunDisc);
+        this.sunDiscSprite = sunDisc;
+
+        const haloTex = (() => {
+            const c = document.createElement('canvas');
+            c.width = c.height = 128;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+            g.addColorStop(0, 'rgba(255,220,150,0.9)');
+            g.addColorStop(0.35, 'rgba(255,160,80,0.45)');
+            g.addColorStop(1, 'rgba(255,120,60,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(c);
+        })();
+        const haloMat = new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+        const sunHalo = new THREE.Sprite(haloMat);
+        sunHalo.scale.set(220, 220, 1);
+        this.scene.add(sunHalo);
+        this.sunHaloSprite = sunHalo;
     }
 
     createTerrain() {
@@ -6233,6 +9120,7 @@ class World {
 
     createClouds() {
         this.cloudSystem = new CloudSystem(this.scene);
+        // Share the sky's sunset state with clouds (tinting happens in CloudSystem.update)
     }
 
     // ============================================================
@@ -7639,23 +10527,71 @@ class World {
             originalPositions[i] = positions[i];
         }
 
-        const riverMat = new THREE.MeshLambertMaterial({
-            color: 0x1E88E5, // Translucent cyan/azure
+        const riverMat = new THREE.ShaderMaterial({
             transparent: true,
-            opacity: 0.75,
+            opacity: 0.92,
             side: THREE.DoubleSide,
-            flatShading: true
+            depthWrite: false,
+            uniforms: {
+                uTime:     { value: 0 },
+                uDeep:     { value: new THREE.Color(0x14506b) }, // dark blue/teal base
+                uShallow:  { value: new THREE.Color(0x2e8f9e) }, // teal
+                uSunTint:  { value: new THREE.Color(0xffb347) }, // golden reflection path
+                uSunMix:   { value: 0.0 },                      // driven by DayNightCycle
+                uFogColor: { value: new THREE.Color(0xaaccee) },
+                uFogNear:  { value: 120 },
+                uFogFar:   { value: 800 },
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                varying float vFogDepth;
+                void main() {
+                    vUv = uv;
+                    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                    vFogDepth = -mv.z;
+                    gl_Position = projectionMatrix * mv;
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uDeep;
+                uniform vec3 uShallow;
+                uniform vec3 uSunTint;
+                uniform float uSunMix;
+                uniform vec3 uFogColor;
+                uniform float uFogNear;
+                uniform float uFogFar;
+                varying vec2 vUv;
+                varying float vFogDepth;
+                void main() {
+                    // Stylized horizontal wave bands (no expensive ripples)
+                    float w1 = sin(vUv.y * 90.0 + uTime * 1.6) * 0.5 + 0.5;
+                    float w2 = sin(vUv.x * 40.0 - uTime * 0.9 + vUv.y * 25.0) * 0.5 + 0.5;
+                    float band = smoothstep(0.55, 0.95, w1 * 0.6 + w2 * 0.4);
+                    vec3 col = mix(uDeep, uShallow, band * 0.45);
+                    // Golden sun-reflection path shimmer down the middle of the strip
+                    float path = pow(max(0.0, 1.0 - abs(vUv.x - 0.5) * 2.2), 2.0);
+                    float shimmer = 0.6 + 0.4 * sin(vUv.y * 120.0 - uTime * 3.0);
+                    col += uSunTint * path * uSunMix * (0.35 + 0.5 * band) * shimmer;
+                    // Standard linear fog for atmospheric blending
+                    float fogFactor = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+                    col = mix(col, uFogColor, fogFactor);
+                    gl_FragColor = vec4(col, 0.85);
+                }
+            `,
         });
 
         const river = new THREE.Mesh(riverGeo, riverMat);
         river.rotation.x = -Math.PI / 2;
         river.position.set(this.terrain.RIVER_X, -1.5, 0);
-        river.receiveShadow = true;
+        river.receiveShadow = false;
         this.scene.add(river);
 
         // Store river mesh for animation
         this.riverMesh = river;
         this.riverOriginalPositions = originalPositions;
+        this.waterMaterials = this.waterMaterials || [];
+        this.waterMaterials.push(riverMat);
 
         // Ocean water (south)
         const oceanGeo = new THREE.PlaneGeometry(2000, 500, 30, 30);
@@ -7665,23 +10601,20 @@ class World {
             oceanOriginalPositions[i] = oceanPositions[i];
         }
 
-        const oceanMat = new THREE.MeshLambertMaterial({
-            color: 0x00ACC1, // Azure cyan
-            transparent: true,
-            opacity: 0.8,
-            side: THREE.DoubleSide,
-            flatShading: true
-        });
-
+        const oceanMat = riverMat.clone();
+        oceanMat.uniforms = THREE.UniformsUtils.clone(riverMat.uniforms);
+        oceanMat.uniforms.uDeep.value = new THREE.Color(0x0f4a63);
+        oceanMat.uniforms.uShallow.value = new THREE.Color(0x2a8fa0);
         const ocean = new THREE.Mesh(oceanGeo, oceanMat);
         ocean.rotation.x = -Math.PI / 2;
         ocean.position.set(0, -2, 800);
-        ocean.receiveShadow = true;
+        ocean.receiveShadow = false;
         this.scene.add(ocean);
 
         // Store ocean mesh for animation
         this.oceanMesh = ocean;
         this.oceanOriginalPositions = oceanOriginalPositions;
+        this.waterMaterials.push(oceanMat);
 
         // Sandy beach banks along river
         const beachMat = new THREE.MeshLambertMaterial({
@@ -7714,8 +10647,29 @@ class World {
         this.scene.add(southBeach);
     }
 
-    // Animate water waves
+    // Animate water waves (shader-based bands + gentle CPU ripple, throttled)
     animateWater(time) {
+        // Update shader uniforms (cheap)
+        if (this.waterMaterials) {
+            const g = window.__game;
+            const cyc = g && g.dayNightCycle;
+            const sunset = cyc ? Math.max(cyc.gameTime >= 17 && cyc.gameTime < 19 ? (cyc.gameTime - 17) / 2 : 0,
+                                          cyc.gameTime >= 6 && cyc.gameTime < 8 ? (cyc.gameTime - 6) / 2 * 0.85 : 0) : 0;
+            for (const m of this.waterMaterials) {
+                m.uniforms.uTime.value = time;
+                m.uniforms.uSunMix.value = Math.min(1, sunset * 1.3);
+                if (g && g.scene && g.scene.fog) {
+                    m.uniforms.uFogColor.value.copy(g.scene.fog.color);
+                    m.uniforms.uFogNear.value = g.scene.fog.near;
+                    m.uniforms.uFogFar.value = g.scene.fog.far;
+                }
+            }
+        }
+
+        // CPU vertex ripple: only every 3rd frame and only near the player to save cost
+        this._waterFrame = (this._waterFrame || 0) + 1;
+        if (this._waterFrame % 3 !== 0) return;
+
         if (this.riverMesh) {
             const positions = this.riverMesh.geometry.attributes.position.array;
             const original = this.riverOriginalPositions;
@@ -8621,18 +11575,18 @@ class World {
         }
 
         // Window lights - only update when night state changes (not every frame)
-        if (nightChanged) {
-            if (isNight) {
-                for (let i = 0; i < this.windowLights.length; i++) {
-                    this.windowLights[i].material.emissive.setHex(0xffaa44);
-                    this.windowLights[i].material.emissiveIntensity = 0.5;
-                }
-            } else {
-                for (let i = 0; i < this.windowLights.length; i++) {
-                    this.windowLights[i].material.emissive.setHex(0x000000);
-                    this.windowLights[i].material.emissiveIntensity = 0;
-                }
+        if (nightChanged || this._lastWindowGlow !== undefined && Math.abs((this._lastWindowGlow) - (isNight ? 0.5 : this._sunsetGlow)) > 0.15) {
+            const glow = isNight ? 0.5 : this._sunsetGlow; // subtle warm glow during golden hour
+            const hex = glow > 0 ? 0xffaa44 : 0x000000;
+            const touched = new Set();
+            for (let i = 0; i < this.windowLights.length; i++) {
+                const m = this.windowLights[i].material;
+                if (touched.has(m.uuid)) continue; // materials may be shared - set once
+                touched.add(m.uuid);
+                m.emissive.setHex(hex);
+                m.emissiveIntensity = glow;
             }
+            this._lastWindowGlow = glow;
         }
     }
 }
@@ -9438,8 +12392,15 @@ class OutboundGame {
         // Animate water waves
         this.world.animateWater(this.clock.elapsedTime);
 
-        // Update lights with player position for distance-based activation
+        // Update lights with player position for distance-based activation.
+        // Sunset glow: windows begin to glow subtly during golden hour (throttled inside).
+        this.world._sunsetGlow = Math.min(0.35, (cycleState.sunsetFactor || 0) * 0.4);
         this.world.updateLights(cycleState.isNight, activePos);
+
+        // City life: traffic-signal phases, windmill blades, boat bobbing
+        if (this.world.cityAnimate) {
+            try { this.world.cityAnimate(this.clock.elapsedTime, deltaTime); } catch (e) { /* non-critical */ }
+        }
 
         // Update LOD system based on camera position
         this.world.lodManager.update(this.camera.position);
