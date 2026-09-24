@@ -5635,9 +5635,11 @@ class World {
                 }
                 this.collisionSystem._addToGrid(c);
             }
-            // move the matching visual object(s) sitting at the old position
+            // move the matching visual object(s) sitting at the old position.
+            // NOTE: colliders are stored as plain data objects (no .isObject3D),
+            // so they can never be matched here — only real scene nodes move.
             for (const obj of this.scene.children) {
-                if (obj === undefined || !obj.visible) continue;
+                if (!obj || !obj.isObject3D || obj.isTerrain) continue;
                 if (Math.abs(obj.position.x - x) < 0.01 && Math.abs(obj.position.z - z) < 0.01 &&
                     obj.position.y > -1) {
                     obj.position.x += dx; obj.position.z += dz;
