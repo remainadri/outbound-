@@ -4670,11 +4670,11 @@ class DayNightCycle {
         this.sun.shadow.mapSize.width = 1024; // Reduced from 2048 for performance
         this.sun.shadow.mapSize.height = 1024; // Reduced from 2048 for performance
         this.sun.shadow.camera.near = 0.5;
-        this.sun.shadow.camera.far = 400;
-        this.sun.shadow.camera.left = -90;
-        this.sun.shadow.camera.right = 90;
-        this.sun.shadow.camera.top = 90;
-        this.sun.shadow.camera.bottom = -90;
+        this.sun.shadow.camera.far = 200;
+        this.sun.shadow.camera.left = -100;
+        this.sun.shadow.camera.right = 100;
+        this.sun.shadow.camera.top = 100;
+        this.sun.shadow.camera.bottom = -100;
         this.sun.shadow.bias = -0.0004;   // Reduce shadow acne
         this.sun.shadow.normalBias = 0.05; // Prevent peter-panning / detached shadows
         this.scene.add(this.sun);
@@ -4873,9 +4873,9 @@ class DayNightCycle {
             if (w.sunHaloSprite) {
                 w.sunHaloSprite.position.copy(w.sunDiscSprite.position);
                 w.sunHaloSprite.visible = sunY > -20;
-                const hs = 200 + goldenHour * 140;
+                const hs = 140 + goldenHour * 80;
                 w.sunHaloSprite.scale.set(hs, hs, 1);
-                w.sunHaloSprite.material.opacity = 0.35 + goldenHour * 0.55;
+                w.sunHaloSprite.material.opacity = 0.2 + goldenHour * 0.3;
             }
         }
 
