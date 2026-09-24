@@ -868,7 +868,7 @@ class RoadMask {
         for (let ring = 1; ring <= 8; ring++) {
             const step = r * 0.9;
             for (let a = 0; a < angles; a++) {
-                const ang = (a / angles) * Math.PI * 2 + rng() * 0.4;
+                const ang = (a / angles) * Math.PI * 2 + rng.next() * 0.4;
                 const nx = x + Math.cos(ang) * step * ring;
                 const nz = z + Math.sin(ang) * step * ring;
                 if (Math.abs(nx) > 1090 || Math.abs(nz) > 1090) continue;
