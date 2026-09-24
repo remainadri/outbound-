@@ -5624,6 +5624,17 @@ class World {
             if (!spot) continue;
             const dx = spot.x - x, dz = spot.z - z;
             c.position.set(spot.x, c.position.y, spot.z);
+            // keep the collision spatial grid in sync with the moved collider
+            if (typeof this.collisionSystem._removeFromGrid === 'function') {
+                this.collisionSystem._removeFromGrid(c);
+                this.collisionSystem._addToGrid(c);
+            } else if (this.collisionSystem.spatialGrid instanceof Map) {
+                for (const arr of this.collisionSystem.spatialGrid.values()) {
+                    const idx = arr.indexOf(c);
+                    if (idx !== -1) arr.splice(idx, 1);
+                }
+                this.collisionSystem._addToGrid(c);
+            }
             // move the matching visual object(s) sitting at the old position
             for (const obj of this.scene.children) {
                 if (obj === undefined || !obj.visible) continue;
