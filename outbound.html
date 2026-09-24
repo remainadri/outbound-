@@ -788,7 +788,7 @@ const CONFIG = {
 
     // Day/Night cycle
     dayDuration: 1440,
-    startTime: 12.0,
+    startTime: 18.2, // begin in golden-hour sunset for the cinematic opening look
 
     // Vehicle
     vehicleEnterDistance: 3.0,
@@ -4670,19 +4670,23 @@ class DayNightCycle {
         this.sun.shadow.mapSize.width = 1024; // Reduced from 2048 for performance
         this.sun.shadow.mapSize.height = 1024; // Reduced from 2048 for performance
         this.sun.shadow.camera.near = 0.5;
-        this.sun.shadow.camera.far = 200; // Increased to cover larger map
-        this.sun.shadow.camera.left = -100; // Increased to cover larger map
-        this.sun.shadow.camera.right = 100; // Increased to cover larger map
-        this.sun.shadow.camera.top = 100; // Increased to cover larger map
-        this.sun.shadow.camera.bottom = -100; // Increased to cover larger map
-        this.sun.shadow.bias = -0.0005; // Reduce shadow acne
-        this.sun.shadow.camera.top = 50;
-        this.sun.shadow.camera.bottom = -50;
+        this.sun.shadow.camera.far = 400;
+        this.sun.shadow.camera.left = -90;
+        this.sun.shadow.camera.right = 90;
+        this.sun.shadow.camera.top = 90;
+        this.sun.shadow.camera.bottom = -90;
+        this.sun.shadow.bias = -0.0004;   // Reduce shadow acne
+        this.sun.shadow.normalBias = 0.05; // Prevent peter-panning / detached shadows
         this.scene.add(this.sun);
+        this.scene.add(this.sun.target);
+        this._shadowFollow = true;
 
+        // Sun disk visual is owned by World (large stylized sprite). Keep a tiny
+        // fallback mesh only if World's sprites are unavailable.
         const sunGeo = new THREE.SphereGeometry(3, 16, 16);
-        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd44, fog: false });
         this.sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        this.sunMesh.visible = false;
         this.scene.add(this.sunMesh);
 
         const moonGeo = new THREE.SphereGeometry(2, 16, 16);
@@ -4699,6 +4703,7 @@ class DayNightCycle {
         this.hemiLight = new THREE.HemisphereLight(0x88aacc, 0x445522, 0.3);
         this.scene.add(this.hemiLight);
 
+        // Cinematic sunset palette: warm key + cool violet fill + warm-green ground bounce
         this.skyColors = {
             day: new THREE.Color(0x4488cc),
             sunset: new THREE.Color(0xff8844),
@@ -4708,15 +4713,31 @@ class DayNightCycle {
 
         this._skyColor = new THREE.Color();
         this._sunColor = new THREE.Color(0xffeedd);
-        this._sunColorSunset = new THREE.Color(0xff8844);
-        this._sunColorDawn = new THREE.Color(0xffaa66);
-        this._ambientColorDay = new THREE.Color(0x88aacc);
-        this._ambientColorNight = new THREE.Color(0x334466);
+        this._sunColorDay = new THREE.Color(0xfff2d0);      // warm yellow-white key
+        this._sunColorSunset = new THREE.Color(0xff9a3c);   // deep warm orange at low sun
+        this._sunColorDawn = new THREE.Color(0xffb066);
+        this._ambientColorDay = new THREE.Color(0x7f9ec4);  // cool blue fill
+        this._ambientColorNight = new THREE.Color(0x2b3355);
+        this._hemiSkyDay = new THREE.Color(0x8fb4dd);
+        this._hemiSkySunset = new THREE.Color(0xd98a6a);    // pink-violet sky bounce
+        this._hemiGroundDay = new THREE.Color(0x556b2f);
+        this._hemiGroundSunset = new THREE.Color(0x6b4a2a); // warm brown earth response
         this._prevIsNight = false;
         this._prevTimeText = '';
+        this._fogColor = new THREE.Color();
+
+        // Sky-dome gradient palettes (day vs golden-hour)
+        this._dayTop     = new THREE.Color(0x2a63b0); // blue upper sky (day)
+        this._nightTop   = new THREE.Color(0x0b1230);
+        this._dayMid     = new THREE.Color(0x5f8fc9); // blue-violet transition (day)
+        this._sunsetMid  = new THREE.Color(0x8a5a9e); // pink/purple band
+        this._dayHorizon = new THREE.Color(0xbcd8ee); // pale horizon (day)
+        this._sunsetHorizon = new THREE.Color(0xff9a4d); // strong orange/gold horizon
 
         this.scene.fog = new THREE.Fog(0xaaccee, 100, 800);
     }
+
+    setShadowFollow(enabled) { this._shadowFollow = !!enabled; }
 
     skipTime() {
         const phases = [5, 8, 12, 17, 19, 23, 29]; // dawn, morning, noon, dusk, night-ish, midnight, next dawn(+24)
@@ -4755,11 +4776,21 @@ class DayNightCycle {
         const sunY = Math.sin(sunAngle) * 80;
         const sunZ = 20;
 
-        this.sun.position.set(sunX, Math.max(sunY, -20), sunZ);
-        this.sunMesh.position.set(sunX, sunY, sunZ);
+        // Camera-following shadow region: keeps long, crisp, stable shadows around
+        // the player instead of one giant blurry map (cascade-style thinking).
+        let camX = 0, camY = 0, camZ = 0;
+        try {
+            const g = window.__game;
+            if (g && g.camera) { camX = g.camera.position.x; camY = g.camera.position.y; camZ = g.camera.position.z; }
+        } catch (e) { /* world not ready yet */ }
 
-        this.moonMesh.position.set(-sunX, -sunY, -sunZ);
-        this.moonLight.position.set(-sunX, -sunY, -sunZ);
+        this.sun.position.set(camX + sunX, Math.max(sunY, -20) + camY, camZ + sunZ);
+        this.sun.target.position.set(camX, camY, camZ);
+        this.sun.target.updateMatrixWorld();
+        this.sunMesh.position.set(camX + sunX, sunY + camY, camZ + sunZ);
+
+        this.moonMesh.position.set(camX - sunX, -sunY + camY, camZ - sunZ);
+        this.moonLight.position.set(camX - sunX, -sunY + camY, camZ - sunZ);
 
         let dayFactor = 0;
         let sunsetFactor = 0;
@@ -4777,21 +4808,31 @@ class DayNightCycle {
             dayFactor = 0;
         }
 
-        this.sun.intensity = Math.max(0, dayFactor * 1.2);
+        // Golden-hour strength curve: warm key light stays strong while the sun is low
+        const goldenHour = Math.max(sunsetFactor, dawnFactor * 0.85);
+        this.sun.intensity = Math.max(0, 0.35 + dayFactor * 1.05) * (1 - goldenHour * 0.25);
 
+        // Warm key light color: day -> deep orange at sunset (direct blend, no drift)
         if (sunsetFactor > 0) {
-            this._sunColor.lerpColors(this._sunColor, this._sunColorSunset, sunsetFactor * 0.1);
+            this._sunColor.lerpColors(this._sunColorDay, this._sunColorSunset, sunsetFactor);
         } else if (dawnFactor > 0) {
-            this._sunColor.lerpColors(this._sunColor, this._sunColorDawn, dawnFactor * 0.1);
+            this._sunColor.lerpColors(this._sunColorDawn, this._sunColorDay, dawnFactor);
+        } else {
+            this._sunColor.copy(this._sunColorDay);
         }
         this.sun.color.copy(this._sunColor);
 
         this.moonLight.intensity = (1 - dayFactor) * 0.3;
 
-        this.ambientLight.intensity = 0.3 + dayFactor * 0.3;
+        // Cool blue/violet fill so shadows read cold against the warm key
+        this.ambientLight.intensity = 0.32 + dayFactor * 0.22 + goldenHour * 0.06;
         this.ambientLight.color.lerpColors(this._ambientColorNight, this._ambientColorDay, dayFactor);
 
-        this.hemiLight.intensity = 0.2 + dayFactor * 0.3;
+        // Hemisphere: pink-violet sky bounce + warm brown/green ground response at sunset
+        this.hemiLight.intensity = 0.25 + dayFactor * 0.30;
+        this.hemiLight.color.lerpColors(this._ambientColorNight, this._hemiSkyDay, dayFactor);
+        if (goldenHour > 0) this.hemiLight.color.lerp(this._hemiSkySunset, goldenHour * 0.7);
+        this.hemiLight.groundColor.lerpColors(this._hemiGroundDay, this._hemiGroundSunset, goldenHour);
 
         if (sunsetFactor > 0) {
             this._skyColor.lerpColors(this.skyColors.day, this.skyColors.sunset, sunsetFactor);
@@ -4802,13 +4843,43 @@ class DayNightCycle {
         } else {
             this._skyColor.copy(this.skyColors.night);
         }
+        // Sky dome shader owns the background; keep a fallback color for safety
         this.scene.background = this._skyColor;
 
-        this.scene.fog.color.copy(this._skyColor);
-        this.scene.fog.near = 100 + dayFactor * 100;
-        this.scene.fog.far = 500 + dayFactor * 300;
+        // Atmospheric perspective: fog tinted toward horizon glow, deeper reach at sunset
+        this._fogColor.copy(this._skyColor);
+        if (goldenHour > 0) this._fogColor.lerp(this.skyColors.sunset, goldenHour * 0.45);
+        this.scene.fog.color.copy(this._fogColor);
+        this.scene.fog.near = 120 + dayFactor * 120;
+        this.scene.fog.far = 620 + dayFactor * 280 + goldenHour * 150;
 
-        this.sunMesh.visible = sunY > -10;
+        // Drive the stylized sky dome + sun sprites (owned by World)
+        const w = (window.__game && window.__game.world) || null;
+        if (w && w.skyMaterial) {
+            const u = w.skyMaterial.uniforms;
+            u.uSunDir.value.set(sunX, Math.max(sunY, -6), sunZ).normalize();
+            u.uSunsetMix.value = Math.min(1, goldenHour * 1.2);
+            u.uNightMix.value = Math.max(0, 1 - dayFactor * 1.6);
+            u.uHorizon.value.lerpColors(this._dayHorizon, this._sunsetHorizon, goldenHour);
+            u.uMid.value.lerpColors(this._dayMid, this._sunsetMid, goldenHour);
+            u.uTop.value.lerpColors(this._dayTop, this._nightTop, Math.max(0, 1 - dayFactor));
+        }
+        if (w && w.sunDiscSprite) {
+            w.sunDiscSprite.position.set(camX + sunX * 8, sunY * 8 + camY, camZ + sunZ * 8);
+            w.sunDiscSprite.visible = sunY > -12;
+            w.sunDiscSprite.material.opacity = 0.55 + goldenHour * 0.45;
+            const s = 55 + goldenHour * 35;
+            w.sunDiscSprite.scale.set(s, s, 1);
+            if (w.sunHaloSprite) {
+                w.sunHaloSprite.position.copy(w.sunDiscSprite.position);
+                w.sunHaloSprite.visible = sunY > -20;
+                const hs = 200 + goldenHour * 140;
+                w.sunHaloSprite.scale.set(hs, hs, 1);
+                w.sunHaloSprite.material.opacity = 0.35 + goldenHour * 0.55;
+            }
+        }
+
+        this.sunMesh.visible = false; // World's sprite sun replaces it
         this.moonMesh.visible = sunY < 10;
 
         const isNight = dayFactor < 0.3;
@@ -4816,6 +4887,7 @@ class DayNightCycle {
         return {
             isNight: isNight,
             dayFactor: dayFactor,
+            sunsetFactor: goldenHour,
         };
     }
 }
@@ -8152,13 +8224,16 @@ class World {
     }
 
     createSky() {
+        // Stylized multi-band sunset sky dome (procedural, driven by DayNightCycle uniforms)
         const skyGeo = new THREE.SphereGeometry(1500, 16, 16);
         const skyMat = new THREE.ShaderMaterial({
             uniforms: {
-                topColor: { value: new THREE.Color(0x4488cc) },
-                bottomColor: { value: new THREE.Color(0xaaccee) },
-                offset: { value: 20 },
-                exponent: { value: 0.4 },
+                uTop:      { value: new THREE.Color(0x1d3a7a) }, // deep blue upper sky
+                uMid:      { value: new THREE.Color(0x7a5aa0) }, // blue-violet transition
+                uHorizon:  { value: new THREE.Color(0xff9a4d) }, // warm orange horizon
+                uSunDir:   { value: new THREE.Vector3(0.4, 0.15, -0.9) },
+                uSunsetMix:{ value: 0.0 },
+                uNightMix: { value: 0.0 },
             },
             vertexShader: `
                 varying vec3 vWorldPosition;
@@ -8169,20 +8244,66 @@ class World {
                 }
             `,
             fragmentShader: `
-                uniform vec3 topColor;
-                uniform vec3 bottomColor;
-                uniform float offset;
-                uniform float exponent;
+                uniform vec3 uTop;
+                uniform vec3 uMid;
+                uniform vec3 uHorizon;
+                uniform vec3 uSunDir;
+                uniform float uSunsetMix;
+                uniform float uNightMix;
                 varying vec3 vWorldPosition;
                 void main() {
-                    float h = normalize(vWorldPosition + offset).y;
-                    gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+                    vec3 dir = normalize(vWorldPosition);
+                    float h = clamp(dir.y, -0.05, 1.0);
+                    // Three-band vertical gradient: horizon -> violet mid -> deep blue top
+                    vec3 col = mix(uHorizon, uMid, smoothstep(0.0, 0.30, h));
+                    col = mix(col, uTop, smoothstep(0.22, 0.75, h));
+                    // Golden band + sun glow near the sun direction (strongest at sunset)
+                    float sunAmt = max(dot(dir, normalize(uSunDir)), 0.0);
+                    float band = pow(clamp(1.0 - abs(dir.y) * 3.2, 0.0, 1.0), 2.0);
+                    vec3 gold = vec3(1.0, 0.78, 0.38);
+                    col += gold * pow(sunAmt, 12.0) * 0.9 * uSunsetMix;         // tight sun glow
+                    col += mix(vec3(1.0,0.45,0.30), gold, 0.5) * band * sunAmt * 0.55 * uSunsetMix; // wide horizon glow
+                    // Night: darken toward a deep indigo, keep faint starless gradient
+                    col = mix(col, vec3(0.03, 0.04, 0.10) + uTop * 0.10, uNightMix * smoothstep(-0.05, 0.35, h));
+                    // Below-horizon fade to fog color for seamless blend with terrain fog
+                    col = mix(uHorizon * 0.55, col, smoothstep(-0.04, 0.06, dir.y));
+                    gl_FragColor = vec4(col, 1.0);
                 }
             `,
             side: THREE.BackSide,
+            depthWrite: false,
         });
         const sky = new THREE.Mesh(skyGeo, skyMat);
+        sky.renderOrder = -10;
         this.scene.add(sky);
+        this.skyMaterial = skyMat;
+
+        // Large readable stylized sun disk + layered halo billboard (faces camera automatically)
+        const sunDiscMat = new THREE.SpriteMaterial({
+            color: 0xffe9b0, transparent: true, opacity: 0.95, depthWrite: false, fog: false
+        });
+        const sunDisc = new THREE.Sprite(sunDiscMat);
+        sunDisc.scale.set(55, 55, 1);
+        this.scene.add(sunDisc);
+        this.sunDiscSprite = sunDisc;
+
+        const haloTex = (() => {
+            const c = document.createElement('canvas');
+            c.width = c.height = 128;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+            g.addColorStop(0, 'rgba(255,220,150,0.9)');
+            g.addColorStop(0.35, 'rgba(255,160,80,0.45)');
+            g.addColorStop(1, 'rgba(255,120,60,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 128, 128);
+            return new THREE.CanvasTexture(c);
+        })();
+        const haloMat = new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+        const sunHalo = new THREE.Sprite(haloMat);
+        sunHalo.scale.set(220, 220, 1);
+        this.scene.add(sunHalo);
+        this.sunHaloSprite = sunHalo;
     }
 
     createTerrain() {
@@ -8577,6 +8698,7 @@ class World {
 
     createClouds() {
         this.cloudSystem = new CloudSystem(this.scene);
+        // Share the sky's sunset state with clouds (tinting happens in CloudSystem.update)
     }
 
     // ============================================================
@@ -9983,23 +10105,71 @@ class World {
             originalPositions[i] = positions[i];
         }
 
-        const riverMat = new THREE.MeshLambertMaterial({
-            color: 0x1E88E5, // Translucent cyan/azure
+        const riverMat = new THREE.ShaderMaterial({
             transparent: true,
-            opacity: 0.75,
+            opacity: 0.92,
             side: THREE.DoubleSide,
-            flatShading: true
+            depthWrite: false,
+            uniforms: {
+                uTime:     { value: 0 },
+                uDeep:     { value: new THREE.Color(0x14506b) }, // dark blue/teal base
+                uShallow:  { value: new THREE.Color(0x2e8f9e) }, // teal
+                uSunTint:  { value: new THREE.Color(0xffb347) }, // golden reflection path
+                uSunMix:   { value: 0.0 },                      // driven by DayNightCycle
+                uFogColor: { value: new THREE.Color(0xaaccee) },
+                uFogNear:  { value: 120 },
+                uFogFar:   { value: 800 },
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                varying float vFogDepth;
+                void main() {
+                    vUv = uv;
+                    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+                    vFogDepth = -mv.z;
+                    gl_Position = projectionMatrix * mv;
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uDeep;
+                uniform vec3 uShallow;
+                uniform vec3 uSunTint;
+                uniform float uSunMix;
+                uniform vec3 uFogColor;
+                uniform float uFogNear;
+                uniform float uFogFar;
+                varying vec2 vUv;
+                varying float vFogDepth;
+                void main() {
+                    // Stylized horizontal wave bands (no expensive ripples)
+                    float w1 = sin(vUv.y * 90.0 + uTime * 1.6) * 0.5 + 0.5;
+                    float w2 = sin(vUv.x * 40.0 - uTime * 0.9 + vUv.y * 25.0) * 0.5 + 0.5;
+                    float band = smoothstep(0.55, 0.95, w1 * 0.6 + w2 * 0.4);
+                    vec3 col = mix(uDeep, uShallow, band * 0.45);
+                    // Golden sun-reflection path shimmer down the middle of the strip
+                    float path = pow(max(0.0, 1.0 - abs(vUv.x - 0.5) * 2.2), 2.0);
+                    float shimmer = 0.6 + 0.4 * sin(vUv.y * 120.0 - uTime * 3.0);
+                    col += uSunTint * path * uSunMix * (0.35 + 0.5 * band) * shimmer;
+                    // Standard linear fog for atmospheric blending
+                    float fogFactor = clamp((vFogDepth - uFogNear) / (uFogFar - uFogNear), 0.0, 1.0);
+                    col = mix(col, uFogColor, fogFactor);
+                    gl_FragColor = vec4(col, 0.85);
+                }
+            `,
         });
 
         const river = new THREE.Mesh(riverGeo, riverMat);
         river.rotation.x = -Math.PI / 2;
         river.position.set(this.terrain.RIVER_X, -1.5, 0);
-        river.receiveShadow = true;
+        river.receiveShadow = false;
         this.scene.add(river);
 
         // Store river mesh for animation
         this.riverMesh = river;
         this.riverOriginalPositions = originalPositions;
+        this.waterMaterials = this.waterMaterials || [];
+        this.waterMaterials.push(riverMat);
 
         // Ocean water (south)
         const oceanGeo = new THREE.PlaneGeometry(2000, 500, 30, 30);
@@ -10009,23 +10179,20 @@ class World {
             oceanOriginalPositions[i] = oceanPositions[i];
         }
 
-        const oceanMat = new THREE.MeshLambertMaterial({
-            color: 0x00ACC1, // Azure cyan
-            transparent: true,
-            opacity: 0.8,
-            side: THREE.DoubleSide,
-            flatShading: true
-        });
-
+        const oceanMat = riverMat.clone();
+        oceanMat.uniforms = THREE.UniformsUtils.clone(riverMat.uniforms);
+        oceanMat.uniforms.uDeep.value = new THREE.Color(0x0f4a63);
+        oceanMat.uniforms.uShallow.value = new THREE.Color(0x2a8fa0);
         const ocean = new THREE.Mesh(oceanGeo, oceanMat);
         ocean.rotation.x = -Math.PI / 2;
         ocean.position.set(0, -2, 800);
-        ocean.receiveShadow = true;
+        ocean.receiveShadow = false;
         this.scene.add(ocean);
 
         // Store ocean mesh for animation
         this.oceanMesh = ocean;
         this.oceanOriginalPositions = oceanOriginalPositions;
+        this.waterMaterials.push(oceanMat);
 
         // Sandy beach banks along river
         const beachMat = new THREE.MeshLambertMaterial({
@@ -10058,8 +10225,29 @@ class World {
         this.scene.add(southBeach);
     }
 
-    // Animate water waves
+    // Animate water waves (shader-based bands + gentle CPU ripple, throttled)
     animateWater(time) {
+        // Update shader uniforms (cheap)
+        if (this.waterMaterials) {
+            const g = window.__game;
+            const cyc = g && g.dayNightCycle;
+            const sunset = cyc ? Math.max(cyc.gameTime >= 17 && cyc.gameTime < 19 ? (cyc.gameTime - 17) / 2 : 0,
+                                          cyc.gameTime >= 6 && cyc.gameTime < 8 ? (cyc.gameTime - 6) / 2 * 0.85 : 0) : 0;
+            for (const m of this.waterMaterials) {
+                m.uniforms.uTime.value = time;
+                m.uniforms.uSunMix.value = Math.min(1, sunset * 1.3);
+                if (g && g.scene && g.scene.fog) {
+                    m.uniforms.uFogColor.value.copy(g.scene.fog.color);
+                    m.uniforms.uFogNear.value = g.scene.fog.near;
+                    m.uniforms.uFogFar.value = g.scene.fog.far;
+                }
+            }
+        }
+
+        // CPU vertex ripple: only every 3rd frame and only near the player to save cost
+        this._waterFrame = (this._waterFrame || 0) + 1;
+        if (this._waterFrame % 3 !== 0) return;
+
         if (this.riverMesh) {
             const positions = this.riverMesh.geometry.attributes.position.array;
             const original = this.riverOriginalPositions;
@@ -10965,18 +11153,18 @@ class World {
         }
 
         // Window lights - only update when night state changes (not every frame)
-        if (nightChanged) {
-            if (isNight) {
-                for (let i = 0; i < this.windowLights.length; i++) {
-                    this.windowLights[i].material.emissive.setHex(0xffaa44);
-                    this.windowLights[i].material.emissiveIntensity = 0.5;
-                }
-            } else {
-                for (let i = 0; i < this.windowLights.length; i++) {
-                    this.windowLights[i].material.emissive.setHex(0x000000);
-                    this.windowLights[i].material.emissiveIntensity = 0;
-                }
+        if (nightChanged || this._lastWindowGlow !== undefined && Math.abs((this._lastWindowGlow) - (isNight ? 0.5 : this._sunsetGlow)) > 0.15) {
+            const glow = isNight ? 0.5 : this._sunsetGlow; // subtle warm glow during golden hour
+            const hex = glow > 0 ? 0xffaa44 : 0x000000;
+            const touched = new Set();
+            for (let i = 0; i < this.windowLights.length; i++) {
+                const m = this.windowLights[i].material;
+                if (touched.has(m.uuid)) continue; // materials may be shared - set once
+                touched.add(m.uuid);
+                m.emissive.setHex(hex);
+                m.emissiveIntensity = glow;
             }
+            this._lastWindowGlow = glow;
         }
     }
 }
@@ -11782,7 +11970,9 @@ class OutboundGame {
         // Animate water waves
         this.world.animateWater(this.clock.elapsedTime);
 
-        // Update lights with player position for distance-based activation
+        // Update lights with player position for distance-based activation.
+        // Sunset glow: windows begin to glow subtly during golden hour (throttled inside).
+        this.world._sunsetGlow = Math.min(0.35, (cycleState.sunsetFactor || 0) * 0.4);
         this.world.updateLights(cycleState.isNight, activePos);
 
         // City life: traffic-signal phases, windmill blades, boat bobbing
