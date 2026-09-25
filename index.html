@@ -2994,7 +2994,8 @@ class Pedestrian {
         const atWork = this._inWorkWindow();
         const p = atWork ? [this.workPost[0] + jx, this.workPost[1] + jz]
                          : [this.homeLot[0] + jx, this.homeLot[1] + jz];
-        this.position.set(p[0], this.world.getGroundHeight(p[0], p[1]), p[1]);
+        this.position.set(p[0], 0, p[1]);
+        this.position.y = this._groundY();
         this._phase = atWork ? 'WORK' : 'HOME';
         this._waitAtPost = 2 + rng() * 4;
         this.target.copy(this.position);
@@ -3006,7 +3007,8 @@ class Pedestrian {
     }
 
     spawnAt(x, z) {
-        this.position.set(x, this.world.getGroundHeight(x, z), z);
+        this.position.set(x, 0, z);
+        this.position.y = this._groundY();
         this.state = 'WALK';
         this.deadTimer = 0;
         this.group.visible = true;
@@ -3101,7 +3103,7 @@ class Pedestrian {
             }
         }
 
-        this.position.y = this.world.getGroundHeight(this.position.x, this.position.z);
+        this.position.y = this._groundY();
         this.group.position.copy(this.position);
         this.group.rotation.y = this.rotation;
         if (this.wobble) this.group.rotation.z = Math.sin(this.walkPhase * 0.7) * 0.08;
@@ -3115,12 +3117,27 @@ class Pedestrian {
     }
 
     _idle(deltaTime) {
-        this.position.y = this.world.getGroundHeight(this.position.x, this.position.z);
+        this.position.y = this._groundY();
         this.group.position.copy(this.position);
         this.walkPhase += deltaTime * 1.2;
         const breathe = Math.sin(this.walkPhase) * 0.03;
         this.legL.rotation.x = 0; this.legR.rotation.x = 0;
         this.armL.rotation.x = breathe; this.armR.rotation.x = -breathe;
+    }
+
+    // ----------------------------------------------------------
+    // FOOT-SOLE GROUNDING: the body is built with shoe soles exactly
+    // at local y=0 (legs hang down from legTop to 0). Terrain mesh and
+    // road slabs sit ~5-7cm apart, so we ground on whichever surface is
+    // HIGHER underfoot minus a tiny sink-in margin. This guarantees the
+    // legs always reach the visible ground — no floating, no sinking.
+    // ----------------------------------------------------------
+    _groundY() {
+        let y = this.world.getGroundHeight(this.position.x, this.position.z);
+        if (this.world.isInCityZone && this.world.isInCityZone(this.position.x, this.position.z)) {
+            y = Math.max(y, 0.06);   // city road/sidewalk slab top
+        }
+        return y - 0.02;             // small sink so soles press into the surface
     }
 }
 // ============================================================
@@ -5930,7 +5947,9 @@ class TerrainSystem {
         }
     }
 
-    getHeight(worldX, worldZ) {
+    // RAW bilinear terrain height — no city-zone road override. Used for
+    // placing buildings/props and grounding pedestrians at their posts.
+    getHeightRaw(worldX, worldZ) {
         const halfSize = this.size / 2;
         const x = ((worldX + halfSize) / this.size) * this.resolution;
         const z = ((worldZ + halfSize) / this.size) * this.resolution;
@@ -5952,6 +5971,11 @@ class TerrainSystem {
         const h0 = h00 * (1 - fx) + h10 * fx;
         const h1 = h01 * (1 - fx) + h11 * fx;
         let height = h0 * (1 - fz) + h1 * fz;
+        return height;
+    }
+
+    getHeight(worldX, worldZ) {
+        let height = this.getHeightRaw(worldX, worldZ);
 
         // CRITICAL FIX: In city zone, return road surface height (Y = 0.05)
         // This ensures player collision detects the road, not the terrain
@@ -9308,9 +9332,14 @@ class World {
         return this.terrain.getHeight(x, z);
     }
 
-    // Universal ground height function for all objects
+    // Universal ground height function for all objects.
+    // NOTE: terrain.getHeight() forces Y=0.05 inside the city zone, which is
+    // only correct for roads. Buildings/props are placed on RAW terrain height
+    // (see createBuilding / tree placement), so pedestrians standing at their
+    // home/work posts must use the raw height too — otherwise they hover up to
+    // ~1m above the pavement and look like legless floating NPCs.
     getGroundHeight(x, z) {
-        return this.terrain.getHeight(x, z);
+        return this.terrain.getHeightRaw(x, z);
     }
 
     createSky() {
