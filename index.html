@@ -3280,6 +3280,33 @@ class WorldSystems {
             v.placeOnRoad(Math.floor(Math.random() * (roads.length || 1)));
             this.traffic.push(v);
         }
+
+        // ULTRA mode: one-time parked-car population (CONFIG.trafficSpawnBudget).
+        // Parked cars are static scenery — no AI updates, culled beyond 200m.
+        const budget = Math.max(0, (CONFIG.trafficSpawnBudget || 0) - this.TRAFFIC_COUNT);
+        if (budget > 0 && roads.length) {
+            let placed = 0;
+            for (let i = 0; i < budget * 3 && placed < budget; i++) {
+                const seg = roads[(i * 7919) % roads.length];
+                const t = ((i * 104729) % 1000) / 1000;
+                const px = seg.x1 + (seg.x2 - seg.x1) * t;
+                const pz = seg.z1 + (seg.z2 - seg.z1) * t;
+                const ang = Math.atan2(seg.z2 - seg.z1, seg.x2 - seg.x1);
+                // pull ~3.6m off the centerline onto the curb, aligned with the road
+                const cx = px + Math.cos(ang + Math.PI / 2) * 3.6;
+                const cz = pz + Math.sin(ang + Math.PI / 2) * 3.6;
+                const v = new TrafficVehicle(this.scene, this.world, types[i % types.length]);
+                v.position.set(cx, 0.12, cz);
+                v.rotation = ang;
+                v.speed = 0;
+                v.mesh.position.copy(v.position);
+                v.mesh.rotation.y = v.rotation;
+                v.isParked = true;
+                this.traffic.push(v);
+                placed++;
+            }
+            console.log(`[OUTBOUND] ultra: ${placed} parked cars added`);
+        }
     }
 
     respawnPed(ped) {
@@ -3342,8 +3369,11 @@ class WorldSystems {
                 continue;
             }
             if (d > 220) { if (this._respawnBudget-- > 0) this.respawnPed(ped); continue; }
-            if (d < 90) ped.update(deltaTime, pp, game.playerThreatening);
-            else if (((ped.index + this.frameNo) & 7) === 0) ped.update(deltaTime * 8, pp, false);
+            // Ultra-mode LOD budget: with 500 NPCs, throttle far-NPC updates & cull rendering
+            const _hiD = CONFIG.npcCount > 200 ? 16 : 8;
+            if (ped.mesh) ped.mesh.visible = d < (CONFIG.npcCount > 200 ? 150 : 170);
+            if (d < 60) ped.update(deltaTime, pp, game.playerThreatening);
+            else if (((ped.index + this.frameNo) % _hiD) === 0) ped.update(deltaTime * _hiD, pp, false);
         }
         this.frameNo = (this.frameNo + 1) & 1023;
 
@@ -3351,6 +3381,7 @@ class WorldSystems {
         for (const car of this.traffic) {
             if (car.isOccupied) continue;
             const d = Math.hypot(car.position.x - pp.x, car.position.z - pp.z);
+            if (car.mesh) car.mesh.visible = d < 200; // ultra guard: cull far traffic rendering
             if (d > 260) {
                 car.placeOnRoad(Math.floor(Math.random() * (this.world._roadPolylines.length || 1)));
                 continue;
@@ -6136,6 +6167,56 @@ class World {
         this.relocateStructuresOffRoads();
         this.placeDensityProps();
         this.placeDensityGrass();
+        // Global collision sweep: register a box collider for every static mesh
+        // that was never given one (props, lamps, rails, fences, decor, ...).
+        try { this.addMissingColliders(); } catch (e) { console.warn('collider sweep failed', e); }
+    }
+
+    // ============================================================
+    // ADD-MISSING-COLLIDERS — one-time world AABB sweep over the
+    // whole scene. Skips dynamic actors (vehicles/peds/player),
+    // terrain/sky/water-sized meshes and sub-speck geometry.
+    // Deduped by rounded footprint so instanced/merged repeats of
+    // the same spot don't stack colliders.
+    // ============================================================
+    addMissingColliders() {
+        const seen = new Set();
+        const existing = new Set();
+        for (const c of this.collisionSystem.colliders) {
+            if (c && c.type === 'box') existing.add(`${Math.round(c.position.x * 2)}|${Math.round(c.position.z * 2)}`);
+        }
+        const box = new THREE.Box3(), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+        this.scene.updateMatrixWorld(true);
+        let added = 0;
+        this.scene.traverse((o) => {
+            if (!o.isMesh || o.isSkinnedMesh) return;
+            if (o.userData && (o.userData._noCol || o.userData.noCollider)) return;
+            // skip anything under a dynamic actor root (vehicles, peds, player)
+            let p = o.parent, dynamic = false;
+            while (p && p !== this.scene) {
+                const nm = p.name || '';
+                if (nm === 'Vehicle' || nm.startsWith('Traffic_') || nm === 'CharacterRoot' ||
+                    (p.userData && (p.userData.kind === 'vehicle' || p.userData.kind === 'ped' || p.userData.dynamic))) {
+                    dynamic = true; break;
+                }
+                p = p.parent;
+            }
+            if (dynamic) return;
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+            box.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+            box.getSize(size); box.getCenter(ctr);
+            if (!isFinite(size.x) || !isFinite(size.y) || !isFinite(size.z)) return;
+            if (size.y > 120 || size.x * size.z > 900 * 900) return;   // terrain / sky / water
+            if (size.x < 0.3 && size.z < 0.3 && size.y < 0.3) return;  // specks (bolts, decals)
+            if (Math.abs(ctr.y) > 250) return;                          // airborne decor / clouds
+            const key = `${Math.round(ctr.x * 2)}|${Math.round(ctr.z * 2)}`;
+            if (existing.has(key) || seen.has(key)) return;
+            seen.add(key);
+            this.collisionSystem.addCollider(new BoxCollider(
+                new THREE.Vector3(ctr.x, box.min.y, ctr.z), size.x, size.y, size.z));
+            added++;
+        });
+        console.log(`[OUTBOUND] addMissingColliders: +${added} colliders (total ${this.collisionSystem.colliders.length})`);
     }
 
     // ============================================================
@@ -12405,7 +12486,7 @@ class OutboundGame {
 
     initRenderer() {
         this.renderer = new THREE.WebGLRenderer({
-            antialias: false, // Disable for performance - can be toggled in settings
+            antialias: !!(window.OUTBOUND_GFX && window.OUTBOUND_GFX.quality === 'ultra'), // MSAA only in ultra mode
             powerPreference: 'high-performance',
             stencil: false, // Disable stencil buffer for performance
             depth: true,
@@ -12415,7 +12496,7 @@ class OutboundGame {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, gfx.dprCap || 1.5));
         this.renderer.shadowMap.enabled = !!gfx.shadows;
-        this.renderer.shadowMap.type = THREE.PCFShadowMap;
+        this.renderer.shadowMap.type = (window.OUTBOUND_GFX && window.OUTBOUND_GFX.quality === 'ultra') ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
         this.renderer.shadowMap.autoUpdate = false;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
@@ -12546,6 +12627,27 @@ class OutboundGame {
         } catch (e) {
             console.warn('Weapon system failed to initialize:', e);
             this.weapon = null;
+        }
+        // Tab weapon wheel + 1-5 quick select bindings
+        if (this.weapon) {
+            const ws = this.weapon;
+            this.input.addKeyListener((e) => {
+                if (e.code === 'Tab') {
+                    if (e.type === 'keydown') { if (!e.repeat) ws.openWheel(); }
+                    else ws.closeWheel();
+                    return;
+                }
+                const n = /^Digit([1-5])$/.exec(e.code);
+                if (n && e.type === 'keydown') {
+                    const idx = Number(n[1]) - 1;
+                    if (ws.wheelOpen) { ws._wheelIndex = idx; ws._paintWheelSel(); }
+                    else ws.selectWeapon(idx);
+                }
+                if (ws.wheelOpen && e.type === 'keydown') {
+                    if (e.code === 'KeyA' || e.code === 'ArrowLeft')  ws.wheelMove(-1);
+                    if (e.code === 'KeyD' || e.code === 'ArrowRight') ws.wheelMove(1);
+                }
+            });
         }
         this.updateAmmoHUD();
 
