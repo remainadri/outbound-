@@ -1,202 +1,3 @@
-Skip to main content
-Ctrl+J
-
-
-
-
-Now do one thing: this is the game. Now we need to make some changes:
-
-The character's camera is working perfectly fine. Just take the character's camera system and put it in the vehicles. Make sure that each and every vehicle in the game is drivable, including the helicopter and the car. Their camera systems are stuck. They are using static camera systems so use the character's camera system in every vehicle. Don't change the actual camera system, just use it as a universal.
-Make this game mobile-optimized. Optimize it for mobile but without hampering any performance on PC. Add a landing page in this game with a start button and a settings button. In the settings button, the graphics could be:
-Lowest graphics: it will run perfectly fine on low-end devices.
-Low, medium, and high graphics: it will require higher-end devices.
-This will affect the graphics functionally, not just create the graphic user interface randomly, and it should work like the graphics settings. We can also turn off shadows and other graphics if we want. We can also control sensitivity, make a sensitivity controller, and play. When you click on Play the game will load.
-Also make the joystick and the instructions that are coming. Make the instructions appear at the top of the screen. For the mobile version, when mobile is detected, put all the buttons on the mobile screen. Make sure that here the guns and other things are not working so make sure the guns are working. Make a gun-pointing gun system, a firing system however you like. Also optimize for mobile. A strict change. I told you to modify only this. Do not modify or touch existing systems.
-
-Brand assets for OUTBOUND
-Completed in 4m 57s
-
-Worked for 9m 56s
-I'll start by reading the project instructions and locating the character/vehicle camera systems so we can reuse the character camera everywhere without rewriting it.
-
-
-
-
-Explored
-1 files, 1 directories
-
-I'll read the game/camera/controls skills and pull the camera classes from the HTML so we can reuse the character camera on vehicles.
-
-
-
-
-Loaded 3 skills
-
-
-
-
-Explored
-1 files, 1 directories, 1 searches
-
-I'll inspect the camera, weapon, and vehicle code next so the character camera can drive every vehicle without rewriting those systems.
-
-
-
-
-Explored
-2 files, 1 directories, 1 searches
-
-Loaded skill
-og
-
-
-
-Explored
-27 files, 2 directories, 8 searches
-
-I have a clear plan: reuse the character camera on every vehicle, add a landing page with working graphics settings, and fix mobile guns without rewriting existing systems. Starting the scaffold, brand pass, and game patches in parallel.
-
-
-
-
-Ran command
-Copy game HTML and create dirs
-
-
-
-
-Edited 8 files
-
-
-
-
-Ran 2 searches
-
-
-
-
-Edited
-patch-outbound.mjs
-+11
--1
-
-
-
-
-Ran command
-Run game HTML patcher
-
-
-
-
-Read 2 files
-
-
-
-
-Edited
-patch-outbound.mjs
-+3
--4
-
-
-
-
-Ran command
-Apply outbound HTML patches
-
-
-
-
-Explored
-2 files, 1 searches
-
-
-
-
-Ran command
-Inspect game.html line endings and snippet
-
-
-
-
-Edited
-patch-outbound.mjs
-+2
--2
-
-
-
-
-Ran command
-Re-run HTML patcher with LF normalize
-
-
-
-
-Ran 2 searches
-
-
-
-
-Edited 5 files
-
-
-
-Edited
-favicon.svg
-+5
-
-
-Edited
-index.tsx
-+6
--6
-
-
-Edited
-index.tsx
-+3
--1
-
-
-Edited
-index.tsx
-+5
--4
-
-
-Edited
-index.tsx
-+4
--4
-                disabled={!ready}
-                className="h-12 rounded-[var(--radius-md)] bg-accent px-6 text-sm font-medium tracking-[0.22em] text-accent-fg uppercase transition-transform duration-[var(--motion-quick,150ms)] hover:brightness-95 active:scale-[0.98] disabled:opacity-60"
-                disabled={!ready || starting}
-                className="h-12 rounded-[var(--radius-md)] bg-accent px-6 text-sm font-medium tracking-[0.22em] text-accent-fg uppercase transition-transform duration-150 hover:brightness-95 active:scale-[0.98] disabled:opacity-60"
-              >
-                Play
-                {starting ? "Loading" : "Play"}
-Writing the game patcher and the React landing page next.
-
-You've hit your usage limit
-Resets later, or upgrade to keep going now.
-
-Subagent completed: Brand assets for OUTBOUND
-298.8s
-Free tier limit reached
-Try again later or upgrade to SuperGrok for much higher limits and premium features.
-
-
-
-
-public
-
-game.html
-
-
-
-Files
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -252,15 +53,15 @@ Files
         #state {
             position: absolute;
             top: 20px;
-            right: 20px;
+            left: 20px;
             color: #0f0;
             font-size: 14px;
-            text-align: right;
+            text-align: left;
             text-shadow: 0 0 5px rgba(0,255,0,0.5);
         }
         #time-display {
             position: absolute;
-            top: 50px;
+            top: 20px;
             right: 20px;
             color: #fff;
             font-size: 16px;
@@ -282,7 +83,7 @@ Files
             position: absolute;
             bottom: 24px;
             left: 20px;
-            width: 220px;
+            width: 190px;
             pointer-events: none;
         }
         #health-label {
@@ -312,7 +113,7 @@ Files
         /* Money + wanted stars */
         #money-display {
             position: absolute;
-            top: 78px;
+            top: 72px;
             right: 20px;
             color: #7CFC8A;
             font-size: 18px;
@@ -322,7 +123,7 @@ Files
         }
         #wanted-stars {
             position: absolute;
-            top: 102px;
+            top: 96px;
             right: 20px;
             font-size: 16px;
             letter-spacing: 3px;
@@ -363,10 +164,10 @@ Files
         }
         #death-overlay h2 { font-size: 40px; letter-spacing: 8px; color: #e53935; }
         #respawn-timer { font-size: 18px; }
-        /* Minimal HUD container in top-left */
+        /* Minimal HUD container in top-left, below the state line */
         #hud-prompts {
             position: absolute;
-            top: 60px;
+            top: 64px;
             left: 20px;
             display: flex;
             flex-direction: column;
@@ -610,62 +411,26 @@ Files
             }
         }
 
-        #vehicle-prompt {
-            position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            font-size: 18px;
-            text-align: center;
-            background: rgba(0,0,0,0.8);
-            padding: 15px 30px;
-            border: 2px solid rgba(255,255,255,0.5);
-            border-radius: 8px;
-            display: none;
-        }
-        #vehicle-prompt.show {
-            display: block;
-        }
-        #helicopter-prompt {
-            position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #fff;
-            font-size: 18px;
-            text-align: center;
-            background: rgba(0,0,0,0.8);
-            padding: 15px 30px;
-            border: 2px solid rgba(0,255,255,0.5);
-            border-radius: 8px;
-            display: none;
-        }
-        #helicopter-prompt.show {
-            display: block;
-        }
-        #helicopter-prompt small {
-            display: block;
-            font-size: 12px;
-            margin-top: 8px;
-            color: rgba(0,255,255,0.8);
-        }
+        /* NOTE: duplicate #vehicle-prompt modal CSS removed — HUD style above wins */
+        /* Helicopter help uses the same top-left HUD stack as other prompts (no centering, no overlap) */
         #speedometer {
             position: absolute;
-            bottom: 80px;
-            right: 40px;
+            bottom: 64px;
+            right: 20px;
             text-align: center;
             background: rgba(0,0,0,0.7);
-            padding: 20px 30px;
-            border: 2px solid rgba(0,255,0,0.5);
+            padding: 12px 22px;
+            border: 1px solid rgba(0,255,0,0.5);
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0,255,0,0.3);
         }
+        /* Keep ammo readout clear of the speedometer (which sits above it while driving) */
+        body.has-speedo #ammo-display { bottom: 150px; }
 
         /* Crime bar (1..100) */
         #crime-wrap {
             position: absolute;
-            top: 126px;
+            top: 48px;
             right: 20px;
             width: 150px;
             pointer-events: none;
@@ -720,15 +485,33 @@ Files
             justify-content: center;
             gap: 4px;
             font-family: 'Courier New', monospace;
+            transform: translate(var(--tx, 0px), var(--ty, 0px));
         }
         .ww-icon { font-size: 40px; line-height: 1; filter: drop-shadow(0 0 4px rgba(0,0,0,0.8)); }
         .ww-name { font-size: 10px; letter-spacing: 1px; text-align: center; text-shadow: 0 1px 2px #000; }
+        .ww-key { font-size: 9px; color: #ffd54f; letter-spacing: 1px; }
         .ww-slot.sel {
             border-color: #ffd54f;
             background: radial-gradient(circle at 35% 30%, rgba(120,100,30,0.98), rgba(40,32,8,0.98));
-            transform: translate(var(--tx), var(--ty)) scale(1.12);
+            transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(1.12);
             box-shadow: 0 0 24px rgba(255,200,60,0.6);
         }
+        /* Aim reticle (right-click ADS) */
+        #aim-reticle {
+            position: fixed;
+            left: 50%; top: 50%;
+            width: 26px; height: 26px;
+            margin: -13px 0 0 -13px;
+            pointer-events: none;
+            z-index: 35;
+            display: none;
+        }
+        #aim-reticle.on { display: block; }
+        #aim-reticle::before, #aim-reticle::after { content: ""; position: absolute; background: rgba(255,80,80,0.9); }
+        #aim-reticle::before { left: 50%; top: 0; width: 2px; height: 100%; margin-left: -1px; }
+        #aim-reticle::after { top: 50%; left: 0; height: 2px; width: 100%; margin-top: -1px; }
+        body.aiming #aim-reticle::before { height: 62%; top: 19%; }
+        body.aiming #aim-reticle::after { width: 62%; left: 19%; }
         #weapon-wheel-title {
             position: absolute;
             left: 50%;
@@ -789,11 +572,11 @@ Files
             cursor: crosshair;
             pointer-events: auto;
         }
-        /* Minimap */
+        /* Minimap — bottom-right, stacked under the ammo/speedometer readouts */
         #minimap-wrap {
             position: absolute;
-            top: 70px;
-            right: 16px;
+            bottom: 20px;
+            right: 20px;
             width: 128px;
             height: 128px;
             border-radius: 8px;
@@ -825,8 +608,22 @@ Files
             #minimap-wrap {
                 width: 96px;
                 height: 96px;
-                top: 40px;
+                bottom: 10px;
                 right: 10px;
+            }
+            /* On small landscape screens the mobile buttons own the bottom-right,
+               so park the minimap top-right instead (under the crime bar). */
+            body.outbound-mobile #minimap-wrap {
+                bottom: auto;
+                top: 120px;
+                right: 10px;
+            }
+            body.outbound-playing:not(.outbound-mobile) #controls {
+                font-size: 10px;
+                line-height: 1.45;
+                bottom: 12px;
+                left: 12px;
+                max-width: 320px;
             }
         }
 
@@ -913,8 +710,100 @@ Files
         body.outbound-mobile #mobile-hints { display: block; }
         body.outbound-mobile #controls { display: none; }
         body.outbound-mobile #title { font-size: 16px; letter-spacing: 4px; top: 48px; }
+        /* Mobile: minimap moves to the right side under the money/wanted/crime stack,
+           ammo sits directly above it, and the speedo/alt readout docks at the top-right
+           so nothing ever covers anything else (joystick/buttons own the bottom corners). */
+        body.outbound-mobile #minimap-wrap {
+            bottom: 20px;
+            top: auto;
+            right: 20px;
+        }
+        body.outbound-mobile #ammo-display { bottom: 158px; right: 20px; }
+        body.outbound-mobile.has-speedo #ammo-display { bottom: 158px; }
+        body.outbound-mobile #speedometer {
+            bottom: auto;
+            top: 130px;
+            right: 20px;
+            padding: 8px 18px;
+        }
+        body.outbound-mobile #speedometer > div:first-child { font-size: 26px !important; }
+        body.outbound-mobile #speedometer > div:last-child { font-size: 11px; }
         @media (prefers-reduced-motion: reduce) {
             #boot-screen .boot-bar > span { animation: none; width: 100%; }
+        }
+
+        /* ---- OUTBOUND landing page ---- */
+        #ui, #mobile-controls, #weapon-wheel, #bigmap { visibility: hidden; }
+        body.outbound-playing #ui,
+        body.outbound-playing #mobile-controls,
+        body.outbound-playing #weapon-wheel,
+        body.outbound-playing #bigmap { visibility: visible; }
+        #landing {
+            position: fixed; inset: 0; z-index: 3000;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(1200px 600px at 70% -10%, #1d2733 0%, #0b0d12 55%, #06070a 100%);
+            color: #f4f4f5;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+        }
+        #landing.hidden { display: none; }
+        #landing::after {
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+        }
+        #landing-inner { position: relative; text-align: center; padding: 24px; max-width: 560px; width: 100%; }
+        #landing-mark { font-size: clamp(42px, 9vw, 78px); font-weight: 700; letter-spacing: 0.42em; text-indent: 0.42em; margin-bottom: 6px; }
+        #landing-tag { font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase; color: #8b93a1; margin-bottom: 44px; }
+        .ob-btn {
+            display: block; width: min(320px, 80vw); margin: 14px auto 0;
+            padding: 15px 28px; font: inherit; font-size: 15px; letter-spacing: 0.28em; text-indent: 0.28em;
+            text-transform: uppercase; cursor: pointer; border-radius: 4px;
+            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+        }
+        .ob-btn:active { transform: scale(0.97); }
+        #btn-play { background: #f4f4f5; color: #0a0a0b; border: 1px solid #f4f4f5; }
+        #btn-play:hover { box-shadow: 0 0 26px rgba(244,244,245,0.35); }
+        #btn-settings { background: transparent; color: #f4f4f5; border: 1px solid rgba(244,244,245,0.35); }
+        #btn-settings:hover { border-color: #f4f4f5; }
+        #settings-panel {
+            position: fixed; inset: 0; z-index: 3100; display: none;
+            align-items: center; justify-content: center;
+            background: rgba(4,5,8,0.72); backdrop-filter: blur(6px);
+        }
+        #settings-panel.open { display: flex; }
+        #settings-card {
+            width: min(440px, 92vw); max-height: 88vh; overflow-y: auto;
+            background: #101216; border: 1px solid rgba(244,244,245,0.14);
+            border-radius: 10px; padding: 26px 28px 30px; text-align: left;
+            font-family: 'Segoe UI', system-ui, sans-serif; color: #f4f4f5;
+        }
+        #settings-card h3 { margin: 0 0 18px; font-size: 14px; letter-spacing: 0.3em; text-transform: uppercase; color: #8b93a1; font-weight: 600; }
+        .set-row { margin-bottom: 20px; }
+        .set-label { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #71717a; margin-bottom: 9px; }
+        .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .seg button {
+            font: inherit; font-size: 12px; padding: 9px 0; cursor: pointer;
+            background: #16191f; color: #a1a1aa; border: 1px solid #262a33; border-radius: 5px;
+        }
+        .seg button.sel { background: #f4f4f5; color: #0a0a0b; border-color: #f4f4f5; }
+        .seg-desc { font-size: 11px; color: #5c6470; margin-top: 7px; min-height: 14px; }
+        input[type=range] { width: 100%; accent-color: #f4f4f5; }
+        .switch-row { display: flex; align-items: center; justify-content: space-between; }
+        .switch { position: relative; width: 46px; height: 24px; display: inline-block; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-sw {
+            position: absolute; inset: 0; background: #262a33; border-radius: 999px; cursor: pointer; transition: 0.15s;
+        }
+        .slider-sw::before {
+            content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+            background: #f4f4f5; border-radius: 50%; transition: 0.15s;
+        }
+        .switch input:checked + .slider-sw { background: #3b82f6; }
+        .switch input:checked + .slider-sw::before { transform: translateX(22px); }
+        #sens-value { color: #d4d4d8; }
+        #btn-close-settings { width: 100%; margin-top: 6px; }
+        @media (max-width: 600px) {
+            #landing-mark { letter-spacing: 0.28em; text-indent: 0.28em; }
         }
     </style>
 </head>
@@ -924,6 +813,43 @@ Files
         <div class="rotate-icon">📱</div>
         <div class="message">Please rotate your device</div>
         <div class="submessage">This game is designed for landscape mode</div>
+    </div>
+
+    <div id="landing">
+        <div id="landing-inner">
+            <div id="landing-mark">OUTBOUND</div>
+            <div id="landing-tag">Open-world prototype · Drive · Fly · Survive</div>
+            <button id="btn-play" class="ob-btn">&#9654;&nbsp; Play</button>
+            <button id="btn-settings" class="ob-btn">Settings</button>
+        </div>
+    </div>
+    <div id="settings-panel">
+        <div id="settings-card">
+            <h3>Settings</h3>
+            <div class="set-row">
+                <div class="set-label">Graphics quality</div>
+                <div class="seg" id="gfx-seg">
+                    <button data-q="lowest">Lowest</button>
+                    <button data-q="low">Low</button>
+                    <button data-q="medium">Medium</button>
+                    <button data-q="high">High</button>
+                    <button data-q="ultra">Ultra</button>
+                </div>
+                <div class="seg-desc" id="gfx-desc"></div>
+            </div>
+            <div class="set-row switch-row">
+                <div>
+                    <div class="set-label" style="margin-bottom:2px">Shadows</div>
+                    <div class="seg-desc">Real-time sun shadows (costly on low-end devices)</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="chk-shadows"><span class="slider-sw"></span></label>
+            </div>
+            <div class="set-row">
+                <div class="set-label">Look sensitivity — <span id="sens-value">1.0x</span></div>
+                <input type="range" id="rng-sens" min="0.25" max="3" step="0.05" value="1">
+            </div>
+            <button id="btn-close-settings" class="ob-btn">Done</button>
+        </div>
     </div>
 
     <div id="boot-screen">
@@ -964,7 +890,7 @@ Files
             <div id="crime-label">CRIME 0</div>
             <div id="crime-bar-bg"><div id="crime-bar-fill"></div></div>
         </div>
-        <div id="ammo-display"><small>PISTOL · G TO FIRE · R RELOAD</small><span id="ammo-text">∞</span></div>
+        <div id="ammo-display"><small id="weapon-name">PISTOL · LMB FIRE · R RELOAD · TAB WHEEL</small><span id="ammo-text">∞</span></div>
         <div id="damage-flash"></div>
         <div id="gps-toast"></div>
         <div id="death-overlay">
@@ -984,8 +910,10 @@ Files
 
     <!-- Weapon wheel overlay (TAB) -->
     <div id="weapon-wheel">
-        <div id="weapon-wheel-title">WEAPON WHEEL — RELEASE TAB TO SELECT · 1-8 QUICK SELECT</div>
+        <div id="weapon-wheel-title">WEAPON WHEEL — RELEASE TAB TO SELECT · 1-5 QUICK SELECT</div>
     </div>
+
+    <div id="aim-reticle"></div>
 
     <!-- Fullscreen map with GPS waypoint (Q) -->
     <div id="bigmap">
@@ -1113,6 +1041,7 @@ const GFX_PRESETS = {
     low:    { dprCap: 0.75, shadows: false, far: 620, npc: 36, traffic: 7, grass: 1800, clumps: 280, treeScale: 0.35, skipClouds: true, skipWaterCPU: true, skipProps: false, shadowMapSize: 512 },
     medium: { dprCap: 1.05, shadows: true,  far: 1400, npc: 80, traffic: 12, grass: 5000, clumps: 900, treeScale: 0.75, skipClouds: false, skipWaterCPU: false, skipProps: false, shadowMapSize: 1024 },
     high:   { dprCap: 1.5,  shadows: true,  far: 2000, npc: 130, traffic: 24, grass: 9000, clumps: 1600, treeScale: 1, skipClouds: false, skipWaterCPU: false, skipProps: false, shadowMapSize: 2048 },
+    ultra:  { dprCap: 2.0,  shadows: true,  far: 3200, npc: 500, traffic: 100, trafficMax: 3000, grass: 26000, clumps: 5000, treeScale: 3.2, skipClouds: false, skipWaterCPU: false, skipProps: false, shadowMapSize: 4096 },
 };
 
 function detectDefaultQuality() {
@@ -1135,11 +1064,13 @@ function applyOutboundSettings() {
     window.OUTBOUND_GFX = Object.assign({}, preset, { quality, shadows, sensitivity });
     CONFIG.npcCount = preset.npc;
     CONFIG.trafficCount = preset.traffic;
+    CONFIG.trafficSpawnBudget = preset.trafficMax || 0; // ultra: extra parked cars spawned once
     CONFIG.grassBlades = preset.grass;
     CONFIG.grassClumps = preset.clumps;
     CONFIG.propTarget = Math.max(40, Math.floor((preset.skipProps ? 40 : CONFIG.propTarget) * (quality === 'lowest' ? 0.12 : quality === 'low' ? 0.4 : quality === 'medium' ? 0.7 : 1)));
 }
 applyOutboundSettings();
+window.CONFIG = CONFIG;
 
 // ============================================================
 // WORLD DENSITY ENGINE (ADD-ONLY SUPPORT SYSTEMS)
@@ -1287,9 +1218,14 @@ class InputManager {
 
         document.addEventListener('mousedown', (e) => {
             if (e.button === 0) this.mouseDown = true;
+            if (e.button === 2) this.rightDown = true;
         });
         document.addEventListener('mouseup', (e) => {
             if (e.button === 0) this.mouseDown = false;
+            if (e.button === 2) this.rightDown = false;
+        });
+        document.addEventListener('contextmenu', (e) => {
+            if (document.body.classList.contains('outbound-playing')) e.preventDefault();
         });
         document.addEventListener('click', () => {
             if (!this.isLocked && !this.isMobile) {
@@ -1319,8 +1255,12 @@ class InputManager {
     }
 
     setupMobileControls() {
-        // Show mobile controls
-        this.mobileControls.classList.add('active');
+        // Show mobile controls (deferred until Play is pressed if landing is still up)
+        if (!document.body.classList.contains('outbound-playing')) {
+            this._pendingMobileControls = true;
+        } else {
+            this.mobileControls.classList.add('active');
+        }
 
         // Hide PC-specific prompts
         const clickPrompt = document.getElementById('click-prompt');
@@ -1607,10 +1547,16 @@ class InputManager {
     }
 
     // Combat controls
+    get aim() {
+        if (this.isMobile) return false; // no right mouse on touch devices
+        return !!this.rightDown;
+    }
+
     get fire() {
         if (this.isMobile) {
             return this.mobileButtons.fire;
         }
+        // Left click fires; while right-click aiming, left click also fires (pointer-locked either way)
         return this.keys['KeyG'] || (this.isLocked && this.mouseDown);
     }
 
@@ -2970,11 +2916,22 @@ class WeaponSystem {
     constructor(game) {
         this.game = game;
         this.scene = game.scene;
-        this.magSize = 12;
-        this.ammo = this.magSize;
+
+        // Multi-weapon arsenal (Tab wheel / digits 1-5)
+        this.weapons = [
+            { name: 'FISTS',   icon: '✊', melee: true },
+            { name: 'PISTOL',  icon: '🔫', mag: 12, dmg: 34, rate: 0.25, reload: 1.4, auto: false },
+            { name: 'SMG',     icon: '💥', mag: 30, dmg: 17, rate: 0.08, reload: 1.8, auto: true },
+            { name: 'SHOTGUN', icon: '🎯', mag: 6,  dmg: 70, rate: 0.85, reload: 2.2, auto: false, pellets: 6 },
+            { name: 'RIFLE',   icon: '🪖', mag: 20, dmg: 28, rate: 0.12, reload: 2.0, auto: true },
+        ];
+        this.current = 1; // pistol
+        this.wheelOpen = false;
+        this._wheelIndex = 1;
+        this._wasAiming = false;
+        this._buildWheelUI();
+        this._applyWeapon(true);
         this.reserve = Infinity;
-        this.fireCooldown = 0.25;
-        this.reloadTime = 1.4;
         this.cooldownTimer = 0;
         this.reloadTimer = 0;
         this.reloading = false;
@@ -3022,6 +2979,84 @@ class WeaponSystem {
         }
     }
 
+    // ---- Weapon wheel + selection --------------------------------------
+    _buildWheelUI() {
+        const wrap = document.getElementById('weapon-wheel');
+        if (!wrap || wrap.querySelector('.ww-slot')) return;
+        const n = this.weapons.length;
+        const R = 165;
+        this.weapons.forEach((w, i) => {
+            const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+            const el = document.createElement('div');
+            el.className = 'ww-slot';
+            el.style.setProperty('--tx', Math.round(Math.cos(a) * R) + 'px');
+            el.style.setProperty('--ty', Math.round(Math.sin(a) * R) + 'px');
+            el.innerHTML = '<div class="ww-icon">' + w.icon + '</div>' +
+                           '<div class="ww-name">' + w.name + '</div>' +
+                           '<div class="ww-key">[' + (i + 1) + ']</div>';
+            wrap.appendChild(el);
+        });
+    }
+
+    _applyWeapon(init) {
+        const w = this.weapons[this.current];
+        if (w.melee) {
+            this.magSize = 0;
+            this.ammo = 0;
+            this.fireCooldown = 0.45;
+            this.reloadTime = 0;
+        } else {
+            this.magSize = w.mag;
+            if (init || this.ammo > this.magSize || !this._magWasSet) { this.ammo = w.mag; this._magWasSet = true; }
+            this.fireCooldown = w.rate;
+            this.reloadTime = w.reload;
+        }
+        if (this.gunMesh) this.gunMesh.visible = !w.melee;
+        if (!init) this.game.updateAmmoHUD();
+    }
+
+    selectWeapon(i) {
+        if (i < 0 || i >= this.weapons.length) return;
+        if (i === this.current) { this._paintWheelSel(); return; }
+        this.current = i;
+        this.reloading = false;
+        this.cooldownTimer = 0;
+        this._applyWeapon(false);
+        this._paintWheelSel();
+        const wn = document.getElementById('weapon-name');
+        if (wn) wn.textContent = this.weapons[i].name + ' · LMB FIRE · R RELOAD · TAB WHEEL';
+    }
+
+    openWheel() {
+        if (this.wheelOpen) return;
+        this.wheelOpen = true;
+        this._wheelIndex = this.current;
+        const wrap = document.getElementById('weapon-wheel');
+        if (wrap) wrap.classList.add('active');
+        this._paintWheelSel();
+    }
+
+    closeWheel() {
+        if (!this.wheelOpen) return;
+        this.wheelOpen = false;
+        const wrap = document.getElementById('weapon-wheel');
+        if (wrap) wrap.classList.remove('active');
+        this.selectWeapon(this._wheelIndex);
+    }
+
+    wheelMove(dir) {
+        if (!this.wheelOpen) return;
+        const n = this.weapons.length;
+        this._wheelIndex = ((this._wheelIndex + dir) % n + n) % n;
+        this._paintWheelSel();
+    }
+
+    _paintWheelSel() {
+        document.querySelectorAll('#weapon-wheel .ww-slot').forEach((el, k) => {
+            el.classList.toggle('sel', k === this._wheelIndex);
+        });
+    }
+
     update(deltaTime, camera, playerPos) {
         this.cooldownTimer = Math.max(0, this.cooldownTimer - deltaTime);
         if (this.reloading) {
@@ -3036,7 +3071,24 @@ class WeaponSystem {
 
         const input = this.game.input;
         const onFoot = !this.game.inVehicle && !this.game.inHelicopter && !this.game.isDead;
-        if (this.gunMesh) this.gunMesh.visible = onFoot;
+        if (this.gunMesh) this.gunMesh.visible = onFoot && !this.weapons[this.current].melee;
+
+        // Right-click hold = aim down sights: tighter camera, slower look, reticle on
+        const aiming = onFoot && !!input.aim;
+        if (aiming !== this._wasAiming) {
+            this._wasAiming = aiming;
+            document.body.classList.toggle('aiming', aiming);
+            const ret = document.getElementById('aim-reticle');
+            if (ret) ret.classList.toggle('on', aiming);
+            const g = this.game;
+            if (g.gtaCamera) {
+                const sens = (window.OUTBOUND_GFX && window.OUTBOUND_GFX.sensitivity) || 1;
+                g.gtaCamera.distance = aiming ? 3.2 : g.gtaCamera.CONFIG.player.distance;
+                g.gtaCamera.CONFIG.sensitivity.x = 0.002 * sens * (aiming ? 0.45 : 1);
+                g.gtaCamera.CONFIG.sensitivity.y = 0.002 * sens * (aiming ? 0.45 : 1);
+            }
+        }
+
         if (onFoot && this.game.character) {
             const pitch = this.game.gtaCamera ? this.game.gtaCamera.pitch : 0;
             this.game.character.rightUpperArm.rotation.x = -1.38 - pitch * 0.55;
@@ -3044,19 +3096,25 @@ class WeaponSystem {
             this.game.character.rightForearm.rotation.x = -0.18;
             this.game.character.rightArm.rotation.y = 0.18;
         }
-        const fireDown = !!input.fire && onFoot;
-        const reloadDown = !!input.reload && !this.game.inVehicle && !this.game.inHelicopter;
+        const wpn = this.weapons[this.current];
+        const fireDown = !!input.fire && onFoot && !this.wheelOpen;
+        const reloadDown = !!input.reload && !this.game.inVehicle && !this.game.inHelicopter && !wpn.melee;
 
         if (reloadDown && !this._wasReload && !this.reloading && this.ammo < this.magSize) {
             this.reloading = true;
             this.reloadTimer = this.reloadTime;
         }
-        if (fireDown && !this._wasFire && !this.reloading && this.cooldownTimer <= 0) {
-            if (this.ammo > 0) {
+        // Auto weapons fire while the button is held; semi-auto/melee need a fresh press
+        const wantFire = fireDown && (wpn.auto ? true : !this._wasFire);
+        if (wantFire && this.cooldownTimer <= 0) {
+            if (wpn.melee) {
+                this.cooldownTimer = this.fireCooldown;
+                this.meleeSwing();
+            } else if (!this.reloading && this.ammo > 0) {
                 this.ammo--;
                 this.cooldownTimer = this.fireCooldown;
                 this.fire(camera, playerPos);
-            } else {
+            } else if (!this.reloading) {
                 this.reloading = true;
                 this.reloadTimer = this.reloadTime;
             }
@@ -3104,9 +3162,22 @@ class WeaponSystem {
     }
 
     fire(camera, playerPos) {
-        playerPosHelper.copy(playerPos);
-        playerPosHelper.y += 1.25;
+        const wpn = this.weapons[this.current];
+        const shots = wpn.pellets || 1;
+        for (let s = 0; s < shots; s++) {
+            this._hitscanShot(camera, wpn.dmg, shots > 1 ? 0.06 : 0);
+        }
+        if (this.game.audioManager) this.game.audioManager.playGunshot();
+    }
+
+    _hitscanShot(camera, dmg, spread) {
         camera.getWorldDirection(this.game.gtaCamForward.fwd);
+        if (spread) {
+            this.game.gtaCamForward.fwd.x += (Math.random() - 0.5) * spread;
+            this.game.gtaCamForward.fwd.y += (Math.random() - 0.5) * spread;
+            this.game.gtaCamForward.fwd.z += (Math.random() - 0.5) * spread;
+            this.game.gtaCamForward.fwd.normalize();
+        }
         const origin = this.getMuzzleWorldPos().clone();
 
         // Muzzle flash
@@ -3150,7 +3221,29 @@ class WeaponSystem {
             if (best.die()) this.game.onCrimeCommitted(1, false);
             this.game.addMoney(CONFIG.moneyPerKill / 2);
         }
-        if (this.game.audioManager) this.game.audioManager.playGunshot();
+    }
+
+    meleeSwing() {
+        // Quick arm jab + close-range knockdown
+        const g = this.game;
+        if (g.character) {
+            g.character.rightUpperArm.rotation.x = -1.9;
+            setTimeout(() => { if (g.character) g.character.rightUpperArm.rotation.x = -1.38; }, 180);
+        }
+        const pp = g.controller ? g.controller.position : new THREE.Vector3();
+        const fwd = g.gtaCamForward ? g.gtaCamForward.fwd : null;
+        const peds = g.worldSystems ? g.worldSystems.pedestrians : [];
+        for (const ped of peds) {
+            if (ped.state === 'DEAD') continue;
+            const dx = ped.position.x - pp.x, dz = ped.position.z - pp.z;
+            const d = Math.hypot(dx, dz);
+            if (d < 2.2) {
+                if (!fwd || (dx * fwd.x + dz * fwd.z) > -0.3) {
+                    if (ped.die()) g.onCrimeCommitted(1, false);
+                    break;
+                }
+            }
+        }
     }
 }
 const playerPosHelper = new THREE.Vector3();
@@ -3186,6 +3279,33 @@ class WorldSystems {
             const v = new TrafficVehicle(this.scene, this.world, types[i % types.length]);
             v.placeOnRoad(Math.floor(Math.random() * (roads.length || 1)));
             this.traffic.push(v);
+        }
+
+        // ULTRA mode: one-time parked-car population (CONFIG.trafficSpawnBudget).
+        // Parked cars are static scenery — no AI updates, culled beyond 200m.
+        const budget = Math.max(0, (CONFIG.trafficSpawnBudget || 0) - this.TRAFFIC_COUNT);
+        if (budget > 0 && roads.length) {
+            let placed = 0;
+            for (let i = 0; i < budget * 3 && placed < budget; i++) {
+                const seg = roads[(i * 7919) % roads.length];
+                const t = ((i * 104729) % 1000) / 1000;
+                const px = seg.x1 + (seg.x2 - seg.x1) * t;
+                const pz = seg.z1 + (seg.z2 - seg.z1) * t;
+                const ang = Math.atan2(seg.z2 - seg.z1, seg.x2 - seg.x1);
+                // pull ~3.6m off the centerline onto the curb, aligned with the road
+                const cx = px + Math.cos(ang + Math.PI / 2) * 3.6;
+                const cz = pz + Math.sin(ang + Math.PI / 2) * 3.6;
+                const v = new TrafficVehicle(this.scene, this.world, types[i % types.length]);
+                v.position.set(cx, 0.12, cz);
+                v.rotation = ang;
+                v.speed = 0;
+                v.mesh.position.copy(v.position);
+                v.mesh.rotation.y = v.rotation;
+                v.isParked = true;
+                this.traffic.push(v);
+                placed++;
+            }
+            console.log(`[OUTBOUND] ultra: ${placed} parked cars added`);
         }
     }
 
@@ -3249,8 +3369,11 @@ class WorldSystems {
                 continue;
             }
             if (d > 220) { if (this._respawnBudget-- > 0) this.respawnPed(ped); continue; }
-            if (d < 90) ped.update(deltaTime, pp, game.playerThreatening);
-            else if (((ped.index + this.frameNo) & 7) === 0) ped.update(deltaTime * 8, pp, false);
+            // Ultra-mode LOD budget: with 500 NPCs, throttle far-NPC updates & cull rendering
+            const _hiD = CONFIG.npcCount > 200 ? 16 : 8;
+            if (ped.mesh) ped.mesh.visible = d < (CONFIG.npcCount > 200 ? 150 : 170);
+            if (d < 60) ped.update(deltaTime, pp, game.playerThreatening);
+            else if (((ped.index + this.frameNo) % _hiD) === 0) ped.update(deltaTime * _hiD, pp, false);
         }
         this.frameNo = (this.frameNo + 1) & 1023;
 
@@ -3258,6 +3381,7 @@ class WorldSystems {
         for (const car of this.traffic) {
             if (car.isOccupied) continue;
             const d = Math.hypot(car.position.x - pp.x, car.position.z - pp.z);
+            if (car.mesh) car.mesh.visible = d < 200; // ultra guard: cull far traffic rendering
             if (d > 260) {
                 car.placeOnRoad(Math.floor(Math.random() * (this.world._roadPolylines.length || 1)));
                 continue;
@@ -5200,9 +5324,11 @@ class DayNightCycle {
 
         this.sun = new THREE.DirectionalLight(0xffeedd, 1.0);
         this.sun.position.set(30, 50, 20);
-        this.sun.castShadow = true;
-        this.sun.shadow.mapSize.width = 1024; // Reduced from 2048 for performance
-        this.sun.shadow.mapSize.height = 1024; // Reduced from 2048 for performance
+        const _gfx = window.OUTBOUND_GFX || {};
+        this.sun.castShadow = (_gfx.shadows !== false);
+        const _sms = _gfx.shadowMapSize || 1024;
+        this.sun.shadow.mapSize.width = _sms;
+        this.sun.shadow.mapSize.height = _sms;
         this.sun.shadow.camera.near = 0.5;
         this.sun.shadow.camera.far = 200;
         this.sun.shadow.camera.left = -100;
@@ -5285,8 +5411,8 @@ class DayNightCycle {
     }
 
     update(deltaTime) {
-        // One full day/night cycle every ~4 real minutes
-        this.gameTime += deltaTime / 10.0;
+        // 1 in-game minute per real second (full 24h day = 24 real minutes)
+        this.gameTime += deltaTime / 60.0;
         if (this.gameTime >= 24.0) {
             this.gameTime -= 24.0;
         }
@@ -5385,7 +5511,7 @@ class DayNightCycle {
         if (goldenHour > 0) this._fogColor.lerp(this.skyColors.sunset, goldenHour * 0.45);
         this.scene.fog.color.copy(this._fogColor);
         this.scene.fog.near = 120 + dayFactor * 120;
-        this.scene.fog.far = 620 + dayFactor * 280 + goldenHour * 150;
+        this.scene.fog.far = Math.min(620 + dayFactor * 280 + goldenHour * 150, ((window.OUTBOUND_GFX && window.OUTBOUND_GFX.far) || 2000) * 0.95);
 
         // Drive the stylized sky dome + sun sprites (owned by World)
         const w = (window.__game && window.__game.world) || null;
@@ -6041,6 +6167,56 @@ class World {
         this.relocateStructuresOffRoads();
         this.placeDensityProps();
         this.placeDensityGrass();
+        // Global collision sweep: register a box collider for every static mesh
+        // that was never given one (props, lamps, rails, fences, decor, ...).
+        try { this.addMissingColliders(); } catch (e) { console.warn('collider sweep failed', e); }
+    }
+
+    // ============================================================
+    // ADD-MISSING-COLLIDERS — one-time world AABB sweep over the
+    // whole scene. Skips dynamic actors (vehicles/peds/player),
+    // terrain/sky/water-sized meshes and sub-speck geometry.
+    // Deduped by rounded footprint so instanced/merged repeats of
+    // the same spot don't stack colliders.
+    // ============================================================
+    addMissingColliders() {
+        const seen = new Set();
+        const existing = new Set();
+        for (const c of this.collisionSystem.colliders) {
+            if (c && c.type === 'box') existing.add(`${Math.round(c.position.x * 2)}|${Math.round(c.position.z * 2)}`);
+        }
+        const box = new THREE.Box3(), size = new THREE.Vector3(), ctr = new THREE.Vector3();
+        this.scene.updateMatrixWorld(true);
+        let added = 0;
+        this.scene.traverse((o) => {
+            if (!o.isMesh || o.isSkinnedMesh) return;
+            if (o.userData && (o.userData._noCol || o.userData.noCollider)) return;
+            // skip anything under a dynamic actor root (vehicles, peds, player)
+            let p = o.parent, dynamic = false;
+            while (p && p !== this.scene) {
+                const nm = p.name || '';
+                if (nm === 'Vehicle' || nm.startsWith('Traffic_') || nm === 'CharacterRoot' ||
+                    (p.userData && (p.userData.kind === 'vehicle' || p.userData.kind === 'ped' || p.userData.dynamic))) {
+                    dynamic = true; break;
+                }
+                p = p.parent;
+            }
+            if (dynamic) return;
+            if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+            box.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld);
+            box.getSize(size); box.getCenter(ctr);
+            if (!isFinite(size.x) || !isFinite(size.y) || !isFinite(size.z)) return;
+            if (size.y > 120 || size.x * size.z > 900 * 900) return;   // terrain / sky / water
+            if (size.x < 0.3 && size.z < 0.3 && size.y < 0.3) return;  // specks (bolts, decals)
+            if (Math.abs(ctr.y) > 250) return;                          // airborne decor / clouds
+            const key = `${Math.round(ctr.x * 2)}|${Math.round(ctr.z * 2)}`;
+            if (existing.has(key) || seen.has(key)) return;
+            seen.add(key);
+            this.collisionSystem.addCollider(new BoxCollider(
+                new THREE.Vector3(ctr.x, box.min.y, ctr.z), size.x, size.y, size.z));
+            added++;
+        });
+        console.log(`[OUTBOUND] addMissingColliders: +${added} colliders (total ${this.collisionSystem.colliders.length})`);
     }
 
     // ============================================================
@@ -7215,6 +7391,7 @@ class World {
     placeRoadLights() {
         // Sparse emissive poles along the two main arterials (cheap: no extra PointLights)
         const bulbMat = new THREE.MeshBasicMaterial({ color: 0xffcc88 });
+        this._roadBulbMat = bulbMat; // night cycle brightens/dims these lamp heads
         const poleMat = this._mat(0x444444);
         const poleGeo = new THREE.CylinderGeometry(0.06, 0.08, 5, 5);
         const bulbGeo = new THREE.SphereGeometry(0.16, 6, 4);
@@ -11987,38 +12164,47 @@ class World {
         });
     }
 
-    updateLights(isNight, playerPosition) {
+    updateLights(isNight, playerPosition, nightF) {
         // Update player position for distance calculations
         if (playerPosition) {
             this.playerPosition.copy(playerPosition);
         }
 
+        const nf = (nightF !== undefined && nightF !== null) ? nightF : (isNight ? 1 : 0);
+        this._nightFactor = nf;
+
         // Throttle light updates to every 10 frames for performance
         this.lightUpdateCounter++;
-        if (this.lightUpdateCounter % 10 !== 0 && isNight === this._prevIsNight) {
+        const glowDelta = Math.abs((this._lastWindowGlow || 0) - Math.max(nf * 0.55, isNight ? 0.35 : (this._sunsetGlow || 0)));
+        if (this.lightUpdateCounter % 10 !== 0 && isNight === this._prevIsNight && glowDelta < 0.12) {
             return;
         }
 
         const nightChanged = isNight !== this._prevIsNight;
         this._prevIsNight = isNight;
 
-        // Distance-based street light activation
+        // Distance-based street light activation — smooth fade from dusk to dark
         const maxActiveDistance = 150; // Only activate lights within 150 units of player
 
         for (let i = 0; i < this.streetLights.length; i++) {
             const lightData = this.streetLights[i];
             const distance = lightData.position.distanceTo(this.playerPosition);
 
-            if (isNight && distance < maxActiveDistance) {
-                lightData.light.intensity = 2.0;
+            if (nf > 0.05 && distance < maxActiveDistance) {
+                lightData.light.intensity = 2.2 * nf;
             } else {
                 lightData.light.intensity = 0.0;
             }
         }
 
-        // Window lights - only update when night state changes (not every frame)
-        if (nightChanged || this._lastWindowGlow !== undefined && Math.abs((this._lastWindowGlow) - (isNight ? 0.5 : this._sunsetGlow)) > 0.15) {
-            const glow = isNight ? 0.5 : this._sunsetGlow; // subtle warm glow during golden hour
+        // Emissive road-lamp heads glow at night, dim metal by day
+        if (this._roadBulbMat) {
+            this._roadBulbMat.color.setHex(nf > 0.45 ? 0xffdca0 : (nf > 0.05 ? 0xb08a50 : 0x5a5148));
+        }
+
+        // Window lights - ramp smoothly with night factor instead of popping on
+        if (nightChanged || glowDelta > 0.12) {
+            const glow = Math.max(nf * 0.6, isNight ? 0.5 : (this._sunsetGlow || 0)); // subtle warm glow during golden hour
             const hex = glow > 0 ? 0xffaa44 : 0x000000;
             const touched = new Set();
             for (let i = 0; i < this.windowLights.length; i++) {
@@ -12300,7 +12486,7 @@ class OutboundGame {
 
     initRenderer() {
         this.renderer = new THREE.WebGLRenderer({
-            antialias: false, // Disable for performance - can be toggled in settings
+            antialias: !!(window.OUTBOUND_GFX && window.OUTBOUND_GFX.quality === 'ultra'), // MSAA only in ultra mode
             powerPreference: 'high-performance',
             stencil: false, // Disable stencil buffer for performance
             depth: true,
@@ -12310,7 +12496,7 @@ class OutboundGame {
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, gfx.dprCap || 1.5));
         this.renderer.shadowMap.enabled = !!gfx.shadows;
-        this.renderer.shadowMap.type = THREE.PCFShadowMap;
+        this.renderer.shadowMap.type = (window.OUTBOUND_GFX && window.OUTBOUND_GFX.quality === 'ultra') ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
         this.renderer.shadowMap.autoUpdate = false;
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
@@ -12442,6 +12628,27 @@ class OutboundGame {
             console.warn('Weapon system failed to initialize:', e);
             this.weapon = null;
         }
+        // Tab weapon wheel + 1-5 quick select bindings
+        if (this.weapon) {
+            const ws = this.weapon;
+            this.input.addKeyListener((e) => {
+                if (e.code === 'Tab') {
+                    if (e.type === 'keydown') { if (!e.repeat) ws.openWheel(); }
+                    else ws.closeWheel();
+                    return;
+                }
+                const n = /^Digit([1-5])$/.exec(e.code);
+                if (n && e.type === 'keydown') {
+                    const idx = Number(n[1]) - 1;
+                    if (ws.wheelOpen) { ws._wheelIndex = idx; ws._paintWheelSel(); }
+                    else ws.selectWeapon(idx);
+                }
+                if (ws.wheelOpen && e.type === 'keydown') {
+                    if (e.code === 'KeyA' || e.code === 'ArrowLeft')  ws.wheelMove(-1);
+                    if (e.code === 'KeyD' || e.code === 'ArrowRight') ws.wheelMove(1);
+                }
+            });
+        }
         this.updateAmmoHUD();
 
         // World systems: pedestrians, roaming traffic, police
@@ -12504,7 +12711,7 @@ class OutboundGame {
             this.inHelicopter = false;
             this.character.getMesh().visible = true;
         }
-        document.getElementById('speedometer').style.display = 'none';
+        this._setSpeedoVisible(false);
     }
 
     respawn() {
@@ -12569,7 +12776,13 @@ class OutboundGame {
         }, { once: true });
     }
 
-    // Minimap: top-right, shows player/vehicle on city map (day/night safe)
+    _setSpeedoVisible(show) {
+        const el = document.getElementById('speedometer');
+        if (el) el.style.display = show ? 'block' : 'none';
+        document.body.classList.toggle('has-speedo', !!show);
+    }
+
+    // Minimap: right side (bottom-right desktop / above ammo on mobile), day/night safe
     updateMinimap() {
         const canvas = document.getElementById('minimap');
         const dot = document.getElementById('minimap-player');
@@ -12716,12 +12929,11 @@ class OutboundGame {
                 this.character.getMesh().position.copy(exitPos);
                 this.controller.position.copy(exitPos);
                 helicopterPrompt.classList.add('hidden');
-                document.getElementById('speedometer').style.display = 'none';
+                this._setSpeedoVisible(false);
             }
 
-            // Show altitude indicator instead of speedometer
-            const speedometer = document.getElementById('speedometer');
-            speedometer.style.display = 'block';
+            // Altitude readout (reuses the speedo panel)
+            this._setSpeedoVisible(true);
 
             // Update altitude display
             const altitude = Math.round(this.helicopter.position.y * 10);
@@ -12756,12 +12968,11 @@ class OutboundGame {
                 this.controller.position.copy(exitPos);
                 this.vehicle = this.playerCar;
                 vehiclePrompt.classList.add('hidden');
-                document.getElementById('speedometer').style.display = 'none';
+                this._setSpeedoVisible(false);
             }
 
             // Show speedometer
-            const speedometer = document.getElementById('speedometer');
-            speedometer.style.display = 'block';
+            this._setSpeedoVisible(true);
 
             // Update speedometer
             const speed = Math.abs(this.vehicle.speed);
@@ -12787,7 +12998,7 @@ class OutboundGame {
             const distanceToHelicopter = nearby && nearby.kind === 'heli' ? nearby.dist : playerPos.distanceTo(helicopterPos);
 
             // Hide speedometer when on foot
-            document.getElementById('speedometer').style.display = 'none';
+            this._setSpeedoVisible(false);
 
             // Handle enter vehicle
             if (fKeyDown && !this.fKeyWasDown && nearby && nearby.kind === 'car') {
@@ -12898,7 +13109,8 @@ class OutboundGame {
         // Update lights with player position for distance-based activation.
         // Sunset glow: windows begin to glow subtly during golden hour (throttled inside).
         this.world._sunsetGlow = Math.min(0.35, (cycleState.sunsetFactor || 0) * 0.4);
-        this.world.updateLights(cycleState.isNight, activePos);
+        const _nf = Math.min(1, Math.max(0, 1 - (cycleState.dayFactor !== undefined ? cycleState.dayFactor : (cycleState.isNight ? 0 : 1)) * 1.8));
+        this.world.updateLights(cycleState.isNight, activePos, _nf);
 
         // City life: traffic-signal phases, windmill blades, boat bobbing
         if (this.world.cityAnimate) {
@@ -12929,19 +13141,138 @@ class OutboundGame {
 // ============================================================
 // START
 // ============================================================
-requestAnimationFrame(() => {
-    try {
-        const game = new OutboundGame();
-        window.__outbound = game;
-    } catch (err) {
-        console.error(err);
-        const boot = document.getElementById('boot-screen');
-        if (boot) {
-            const sub = boot.querySelector('.boot-sub');
-            if (sub) sub.textContent = 'Failed to start — ' + (err && err.message ? err.message : 'error');
+// ============================================================
+// LANDING PAGE + LIVE SETTINGS (applies GFX_PRESETS functionally)
+// ============================================================
+const OUTBOUND_SETTINGS_KEY = 'outbound-settings';
+function loadOutboundSettings() {
+    try { return JSON.parse(localStorage.getItem(OUTBOUND_SETTINGS_KEY) || '{}'); } catch (e) { return {}; }
+}
+function saveOutboundSettings(s) {
+    try { localStorage.setItem(OUTBOUND_SETTINGS_KEY, JSON.stringify(s)); } catch (e) { /* private mode */ }
+}
+
+const GFX_DESCS = {
+    lowest: 'Runs on low-end devices. No shadows/grass, tiny world density, reduced resolution.',
+    low: 'Budget devices. No shadows, reduced population & draw distance.',
+    medium: 'Balanced. Shadows on, moderate population, full props & clouds.',
+    high: 'High-end devices only. Max population, 2K shadow map, full draw distance.',
+    ultra: 'ULTRA — 500 NPCs, 100 active cars + 3000 parked, 3000+ trees, peak detailing, 4K shadows, MSAA.'
+};
+
+let __gameStarted = false;
+function startOutboundGame() {
+    if (__gameStarted) return;
+    __gameStarted = true;
+    document.body.classList.add('outbound-playing');
+    requestAnimationFrame(() => {
+        try {
+            const game = new OutboundGame();
+            window.__outbound = game;
+            const g = window.__outbound;
+            if (g && g.input && g.input._pendingMobileControls) {
+                g.input.mobileControls.classList.add('active');
+                g.input._pendingMobileControls = false;
+            }
+        } catch (err) {
+            console.error(err);
+            const boot = document.getElementById('boot-screen');
+            if (boot) {
+                boot.classList.remove('hidden');
+                const sub = boot.querySelector('.boot-sub');
+                if (sub) sub.textContent = 'Failed to start — ' + (err && err.message ? err.message : 'error');
+            }
+        }
+    });
+}
+
+(function detectMobileUI() {
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if (isTouch && /Android|iPhone|iPad|iOS|Mobile/i.test(navigator.userAgent)) {
+        document.body.classList.add('outbound-mobile');
+    }
+})();
+
+(function initLanding() {
+    const landing = document.getElementById('landing');
+    const panel = document.getElementById('settings-panel');
+    const seg = document.getElementById('gfx-seg');
+    const desc = document.getElementById('gfx-desc');
+    const chkShadows = document.getElementById('chk-shadows');
+    const rngSens = document.getElementById('rng-sens');
+    const sensValue = document.getElementById('sens-value');
+    if (!landing) { startOutboundGame(); return; }
+
+    let s = loadOutboundSettings();
+    const curQuality = () => (GFX_PRESETS[s.quality] ? s.quality : detectDefaultQuality());
+    const curShadows = () => { const p = GFX_PRESETS[curQuality()]; return s.shadows === undefined ? !!p.shadows : !!s.shadows; };
+    const curSens = () => Math.max(0.25, Math.min(3, Number(s.sensitivity) || 1));
+
+    function refreshUI() {
+        const q = curQuality();
+        for (const b of seg.querySelectorAll('button')) b.classList.toggle('sel', b.dataset.q === q);
+        desc.textContent = GFX_DESCS[q];
+        chkShadows.checked = curShadows();
+        rngSens.value = curSens();
+        sensValue.textContent = Number(curSens()).toFixed(2) + 'x';
+    }
+
+    function persistAndApply() {
+        saveOutboundSettings(s);
+        applyOutboundSettings();          // updates window.OUTBOUND_GFX + CONFIG counts
+        const gfx = window.OUTBOUND_GFX;
+        const game = window.__outbound;
+        if (game) {
+            try {
+                game.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, gfx.dprCap));
+                game.renderer.shadowMap.enabled = !!gfx.shadows;
+                game.camera.far = gfx.far;
+                game.camera.updateProjectionMatrix();
+                if (game.dayNightCycle && game.dayNightCycle.sun) {
+                    game.dayNightCycle.sun.castShadow = !!gfx.shadows;
+                    const sms = gfx.shadowMapSize || 1024;
+                    if (game.dayNightCycle.sun.shadow.mapSize.width !== sms) {
+                        game.dayNightCycle.sun.shadow.mapSize.set(sms, sms);
+                        if (game.dayNightCycle.sun.shadow.map) {
+                            game.dayNightCycle.sun.shadow.map.dispose();
+                            game.dayNightCycle.sun.shadow.map = null;
+                        }
+                    }
+                    game.renderer.shadowMap.needsUpdate = true;
+                }
+                if (game.gtaCamera) {
+                    game.gtaCamera.CONFIG.sensitivity.x = 0.002 * gfx.sensitivity;
+                    game.gtaCamera.CONFIG.sensitivity.y = 0.002 * gfx.sensitivity;
+                }
+                if (game.input && game.input.touchCamera) {
+                    game.input.touchCamera.sensitivity = 0.005 * gfx.sensitivity;
+                }
+            } catch (e) { console.warn('Live settings apply failed (takes effect on next play):', e); }
         }
     }
-});
+
+    seg.addEventListener('click', (ev) => {
+        const b = ev.target.closest('button[data-q]');
+        if (!b) return;
+        s.quality = b.dataset.q;
+        delete s.shadows; // switching preset resets manual shadow override to preset default
+        refreshUI(); persistAndApply();
+    });
+    chkShadows.addEventListener('change', () => { s.shadows = chkShadows.checked; refreshUI(); persistAndApply(); });
+    rngSens.addEventListener('input', () => { s.sensitivity = Number(rngSens.value); refreshUI(); persistAndApply(); });
+
+    document.getElementById('btn-settings').addEventListener('click', () => { refreshUI(); panel.classList.add('open'); });
+    document.getElementById('btn-close-settings').addEventListener('click', () => { panel.classList.remove('open'); });
+    panel.addEventListener('click', (ev) => { if (ev.target === panel) panel.classList.remove('open'); });
+
+    document.getElementById('btn-play').addEventListener('click', () => {
+        persistAndApply();
+        landing.classList.add('hidden');
+        startOutboundGame();
+    });
+
+    refreshUI();
+})();
 
 // Try to lock orientation to landscape on mobile
 if (screen.orientation && screen.orientation.lock) {
@@ -12960,4 +13291,3 @@ document.addEventListener('touchmove', function(e) {
     </script>
 </body>
 </html>
-Mobile Game Camera and Optimization Updates - Grok
