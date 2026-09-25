@@ -1828,6 +1828,187 @@ class Character {
 // ============================================================
 // VEHICLE - Lamborghini-inspired Supercar
 // ============================================================
+// ============================================================
+// SHARED WORLD HELPERS — car physics safety + building doors/windows
+// ============================================================
+// Momentum-based steering for every drivable car: velocity is decomposed
+// into forward/lateral components each frame; engine force pushes along
+// the nose, yaw comes from steering × speed, and lateral slip decays with
+// a grip constant instead of being instantly zeroed. Result: pressing A/D
+// while moving actually throws the car sideways with inertia (and it
+// drifts wider on the handbrake).
+function driveCarPhysics(car, deltaTime, input, world) {
+    if (!car.isOccupied) return;
+    if (!car.velocity) car.velocity = new THREE.Vector3(0, 0, 0);
+    const eng = car.engineSpec || (car.bp && car.bp.engine) || CONFIG;
+    const joystickVector = input.getJoystickVector();
+    const hasJoystickInput = Math.abs(joystickVector.x) > 0.1 || Math.abs(joystickVector.y) > 0.1;
+    let throttle = 0;
+    if (hasJoystickInput) throttle = -joystickVector.y;
+    else if (input.forward) throttle = 1.0;
+    else if (input.backward) throttle = -1.0;
+    let steerIn = 0;
+    if (hasJoystickInput) steerIn = -joystickVector.x;
+    else if (input.left) steerIn = 1.0;
+    else if (input.right) steerIn = -1.0;
+
+    // Heading basis (car forward is local -Z rotated by yaw)
+    const fx = -Math.sin(car.rotation), fz = -Math.cos(car.rotation);
+    const rx = Math.cos(car.rotation), rz = -Math.sin(car.rotation);
+    let vF = car.velocity.x * fx + car.velocity.z * fz;   // forward component
+    let vL = car.velocity.x * rx + car.velocity.z * rz;   // lateral (slip) component
+
+    // Engine / brake along the nose
+    if (Math.abs(throttle) > 0.1) {
+        if (throttle > 0) vF += eng.accel * throttle * deltaTime;
+        else vF += eng.brake * throttle * deltaTime;
+    } else {
+        vF *= Math.pow(CONFIG.vehicleFriction, deltaTime * 60);
+    }
+    if (input.handbrake) { vF *= Math.pow(0.965, deltaTime * 60); }
+    vF = THREE.MathUtils.clamp(vF, -CONFIG.vehicleMaxSpeed * 0.3, eng.maxSpeed);
+
+    // Yaw responds to the actual direction of travel (momentum-aware):
+    const spd = Math.hypot(car.velocity.x, car.velocity.z);
+    const heading = spd > 0.5 ? Math.atan2(-car.velocity.x, -car.velocity.z) : car.rotation;
+    let hDiff = car.rotation - heading;
+    while (hDiff > Math.PI) hDiff -= Math.PI * 2;
+    while (hDiff < -Math.PI) hDiff += Math.PI * 2;
+    const dirSign = vF < -0.3 ? -1 : 1;
+    const speedFactor = Math.min(1, spd / Math.max(0.01, eng.maxSpeed));
+    const turnRate = steerIn * eng.steer * (0.55 + 0.75 * speedFactor) * dirSign *
+                     Math.min(1, spd / 3.5);
+    car.rotation += (turnRate - hDiff * 1.4) * deltaTime;
+    car.steering = THREE.MathUtils.clamp(steerIn * CONFIG.vehicleMaxSteering,
+                                         -CONFIG.vehicleMaxSteering, CONFIG.vehicleMaxSteering);
+
+    // Lateral grip: tires scrub off slip over time — low when handbraking
+    const gripK = input.handbrake ? 1.4 : (8.5 + (eng.grip || 2.5));
+    vL *= Math.exp(-gripK * deltaTime);
+
+    // Rebuild world velocity from the momentum components
+    const nfx = -Math.sin(car.rotation), nfz = -Math.cos(car.rotation);
+    const nrx = Math.cos(car.rotation), nrz = -Math.sin(car.rotation);
+    car.velocity.x = nfx * vF + nrx * vL;
+    car.velocity.z = nfz * vF + nrz * vL;
+    car.speed = vF;
+
+    // Vertical (gravity/ground clamp)
+    const terrainHeight = world.getTerrainHeight(car.position.x, car.position.z);
+    const groundLevel = terrainHeight + CONFIG.vehicleGroundHeight;
+    if (car.position.y > groundLevel + 0.01) car.velocity.y += CONFIG.vehicleGravity * deltaTime;
+    else { car.velocity.y = 0; car.position.y = groundLevel; }
+
+    car.position.x += car.velocity.x * deltaTime;
+    car.position.y += car.velocity.y * deltaTime;
+    car.position.z += car.velocity.z * deltaTime;
+    if (car.position.y <= groundLevel) { car.position.y = groundLevel; car.velocity.y = 0; }
+    car.velocity.y = Math.min(car.velocity.y, 5.0);
+
+    // ---- CARS STAY ON THE ROAD & NEVER PHASE THROUGH BUILDINGS ----
+    resolveCarCollisions(car, world);
+
+    // Transform + wheels
+    car.mesh.position.copy(car.position);
+    car.mesh.rotation.y = car.rotation;
+    car.wheelRotation = (car.wheelRotation || 0) + vF * deltaTime * 3;
+    if (car.wheels) {
+        for (const wheel of car.wheels) {
+            if (wheel.children[0]) wheel.children[0].rotation.x = car.wheelRotation;
+            if (wheel.children[1]) wheel.children[1].rotation.x = car.wheelRotation;
+            wheel.rotation.y = wheel.userData.steerable ? car.steering : 0;
+        }
+    }
+}
+
+// Box-collider push-out (buildings, walls, containers) + road clamping.
+function resolveCarCollisions(car, world) {
+    const cs = world.collisionSystem;
+    const HALF_W = 1.15, HALF_L = 2.45;   // generous car half-extents
+    if (cs && cs.getNearbyColliders) {
+        const nearby = cs.getNearbyColliders(car.position, 10);
+        for (const c of nearby) {
+            if (!c || c.type !== 'box') continue;
+            const hw = (c.width || 0) / 2 + HALF_W;
+            const hd = (c.depth || 0) / 2 + HALF_L;
+            const dx = car.position.x - c.position.x;
+            const dz = car.position.z - c.position.z;
+            if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
+                const px = hw - Math.abs(dx), pz = hd - Math.abs(dz);
+                if (px < pz) car.position.x += Math.sign(dx || 1) * px;
+                else car.position.y >= (c.position.y || 0) && car.position.y < ((c.position.y || 0) + (c.height || 0))
+                    ? (car.position.z += Math.sign(dz || 1) * pz)
+                    : (car.position.z += Math.sign(dz || 1) * pz);
+                // kill the velocity component that drove us into the wall
+                const nx = px < pz ? Math.sign(dx || 1) : 0;
+                const nz = px < pz ? 0 : Math.sign(dz || 1);
+                const vn = car.velocity.x * nx + car.velocity.z * nz;
+                if (vn < 0) { car.velocity.x -= vn * nx * 1.2; car.velocity.z -= vn * nz * 1.2; }
+                car.speed *= 0.5;
+            }
+        }
+    }
+    // Outside the designed city grid there are no slabs: keep cars near a road
+    const mask = world._roadMask;
+    if (mask && world.isInCityZone && !world.isInCityZone(car.position.x, car.position.z)) {
+        if (mask.distToRoad(car.position.x, car.position.z) > 10) {
+            let bx = car.position.x, bz = car.position.z, bd = Infinity;
+            const roads = world._roadPolylines || [];
+            for (let i = 0; i < roads.length; i++) {
+                const s = roads[i];
+                const ddx = s.x2 - s.x1, ddz = s.z2 - s.z1;
+                const l2 = ddx * ddx + ddz * ddz || 1;
+                let t = ((car.position.x - s.x1) * ddx + (car.position.z - s.z1) * ddz) / l2;
+                t = Math.max(0, Math.min(1, t));
+                const cx = s.x1 + ddx * t, cz = s.z1 + ddz * t;
+                const d = Math.hypot(cx - car.position.x, cz - car.position.z);
+                if (d < bd) { bd = d; bx = cx; bz = cz; }
+            }
+            if (bd < 1e9) {
+                const pull = Math.min(bd, 14 * ((typeof performance !== 'undefined') ? 0.016 : 0.016) * 60 * 0.016 * 60);
+                const k = Math.min(1, 2.5 * 0.016 * (bd / 10 + 1));
+                car.position.x += (bx - car.position.x) * k;
+                car.position.z += (bz - car.position.z) * k;
+                car.velocity.multiplyScalar(0.92);
+                car.speed *= 0.92;
+            }
+        }
+    }
+}
+
+// Hinged residential door: pivot group at the hinge edge + panel swinging
+// outward. Registered on the owning building group so World.registerDoors()
+// can collect them after road-safe relocation.
+function makeDoor(parent, x, z, rotY, w, h) {
+    w = w || 1.0; h = h || 1.8;
+    const pivot = new THREE.Group();
+    pivot.position.set(x - w / 2, 0, z + 0.09);
+    pivot.rotation.y = rotY || 0;
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.08),
+        new THREE.MeshLambertMaterial({ color: 0x5D4037, flatShading: true }));
+    panel.position.set(w / 2, h / 2, 0);
+    panel.castShadow = true;
+    pivot.add(panel);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 5, 4),
+        new THREE.MeshLambertMaterial({ color: 0xC9A84C }));
+    knob.position.set(w * 0.82, h * 0.45, -0.06);
+    pivot.add(knob);
+    parent.add(pivot);
+    (parent.userData.doors = parent.userData.doors || []).push(pivot);
+    return pivot;
+}
+
+// Glowing window pane: own material instance (never the shared cache) so
+// updateLights() can ramp emissive at night without touching the walls.
+function glowWindow(parent, world, w, h, d, x, y, z, tint) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshLambertMaterial({ color: tint != null ? tint : 0x9FD8E8, emissive: 0x000000, emissiveIntensity: 0, flatShading: true }));
+    m.position.set(x, y, z);
+    parent.add(m);
+    world.windowLights.push(m);
+    return m;
+}
+
 class Vehicle {
     constructor(scene, world, spawnPosition = null) {
         this.scene = scene;
@@ -2039,7 +2220,14 @@ class Vehicle {
         this.mesh.add(steering);
     }
 
+    // Momentum physics (shared with traffic cars): pressing A/D while moving
+    // throws the car sideways with real inertia, and the car can never drive
+    // through buildings or off-road outside the city grid.
     update(deltaTime, input, world) {
+        driveCarPhysics(this, deltaTime, input, world);
+    }
+
+    _legacyUpdate(deltaTime, input, world) {
         if (!this.isOccupied) return;
 
         // Safety check: ensure velocity is initialized
@@ -2506,6 +2694,10 @@ class TrafficVehicle {
         this.position.z += -Math.cos(this.rotation) * this.speed * deltaTime;
         this.position.y = 0.12;
 
+        // Traffic AI stays on the road and never phases through buildings:
+        // same collider push-out + off-road clamp used by player cars.
+        resolveCarCollisions({ position: this.position, velocity: { x: 0, z: 0, y: 0 }, multiplyScalar() {} }, world);
+
         if (Math.hypot(toTarget.x, toTarget.z) < 8) this.nextAiSegment();
         if (this.aiStoppedFor > 6) {
             this.aiStoppedFor = 0;
@@ -2525,8 +2717,12 @@ class TrafficVehicle {
         playerPosition.copy(this.position).add(exitOffset);
         playerPosition.y = this.position.y;
     }
-    // Player driving uses the same physics as Vehicle.update (character cam follows).
+    // Player driving uses the shared momentum physics (character cam follows).
     playerDrive(deltaTime, input, world) {
+        driveCarPhysics(this, deltaTime, input, world);
+    }
+
+    _legacyPlayerDrive(deltaTime, input, world) {
         if (!this.isOccupied) return;
         if (!this.velocity) this.velocity = new THREE.Vector3(0, 0, 0);
         const joystickVector = input.getJoystickVector();
