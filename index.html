@@ -416,78 +416,7 @@
         /* Keep ammo readout clear of the speedometer (which sits above it while driving) */
         body.has-speedo #ammo-display { bottom: 150px; }
 
-        /* Crime bar (0..100) — authoritative state lives ONLY in CrimeManager.
-           Hidden entirely while the state is NONE (fresh load = no crime UI). */
-        #crime-wrap {
-            position: absolute;
-            top: 48px;
-            right: 20px;
-            width: 150px;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(-4px);
-            transition: opacity 0.35s ease;
-        }
-        #crime-wrap.active { opacity: 1; transform: none; }
-        #crime-reason {
-            font-size: 9px;
-            letter-spacing: 1.5px;
-            margin-bottom: 2px;
-            text-align: right;
-            min-height: 11px;
-            color: rgba(255,255,255,0.8);
-            text-shadow: 0 1px 2px #000;
-        }
-        #crime-label {
-            font-size: 10px;
-            letter-spacing: 2px;
-            margin-bottom: 3px;
-            text-align: right;
-            text-shadow: 0 1px 2px #000;
-            transition: color 0.6s ease;
-        }
-        #crime-bar-bg {
-            width: 100%;
-            height: 8px;
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        #crime-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: #ffffff;
-            box-shadow: 0 0 8px rgba(255,255,255,0.5);
-            transition: width 0.3s ease, background-color 0.6s ease, box-shadow 0.6s ease;
-        }
-        /* State colors: BLUE suspect · WHITE searching · RED visual confirmation */
-        #crime-wrap.state-blue  #crime-label { color: #6ea8ff; }
-        #crime-wrap.state-white #crime-label { color: #f2f5ff; }
-        #crime-wrap.state-red   #crime-label { color: #ff5252; }
-        #crime-wrap.state-blue  #crime-bar-fill { background: #448aff; box-shadow: 0 0 8px rgba(68,138,255,0.7); }
-        #crime-wrap.state-white #crime-bar-fill { background: #e8eaf6; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
-        #crime-wrap.state-red   #crime-bar-fill { background: #e53935; box-shadow: 0 0 10px rgba(229,57,53,0.8); }
-        /* Developer crime debug panel (toggle with window.__outbound.debugCrime(true)) */
-        #crime-debug {
-            position: absolute;
-            top: 120px;
-            left: 12px;
-            z-index: 30;
-            max-width: 320px;
-            max-height: 46vh;
-            overflow: hidden;
-            background: rgba(0, 8, 16, 0.82);
-            border: 1px solid rgba(0, 255, 160, 0.4);
-            border-radius: 8px;
-            padding: 8px 10px;
-            color: #7dffc9;
-            font-family: 'Courier New', monospace;
-            font-size: 10px;
-            line-height: 1.5;
-            white-space: pre;
-            pointer-events: none;
-        }
+        /* POLICE SYSTEM REMOVED — crime bar / wanted UI styles deleted */
         /* Weapon wheel */
         #weapon-wheel {
             position: fixed;
@@ -916,12 +845,6 @@
             <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
         </div>
         <div id="money-display">$0</div>
-        <div id="crime-wrap" class="state-none">
-            <div id="crime-reason"></div>
-            <div id="crime-label">CRIME 0</div>
-            <div id="crime-bar-bg"><div id="crime-bar-fill"></div></div>
-        </div>
-        <div id="crime-debug" style="display:none"></div>
         <div id="ammo-display"><small id="weapon-name">PISTOL · LMB FIRE · R RELOAD · TAB WHEEL</small><span id="ammo-text">∞</span></div>
         <div id="damage-flash"></div>
         <div id="gps-toast"></div>
@@ -2389,13 +2312,6 @@ const CAR_BLUEPRINTS = {
         cabin: { w: 2.3, h: 1.1, d: 1.8, z: -2.2 }, hoodRake: 0.0, box: { w: 2.5, h: 2.2, d: 4.0, z: 1.3 },
         wheelX: 1.15, wheelZ: 2.6, wheelR: 0.5, wheelsCount: 6,
         engine: { accel: 3.2, maxSpeed: 14, brake: 7, steer: 1.4, grip: 1.0, sound: 55 }
-    },
-    police: {
-        name: 'POLICE CRUISER', bodyColor: 0xF4F4F4, w: 2.05, len: 4.9, h: 0.55, y: 0.52,
-        cabin: { w: 1.8, h: 0.62, d: 2.2, z: 0.15 }, hoodRake: 0.06, trunk: true, lightbar: true,
-        doorPanel: 0x1B2A4A,
-        wheelX: 0.97, wheelZ: 1.5, wheelR: 0.36,
-        engine: { accel: 7.5, maxSpeed: 27, brake: 11, steer: 2.1, grip: 1.6, sound: 110 }
     }
 };
 
@@ -2516,20 +2432,7 @@ class TrafficVehicle {
             cargo.castShadow = true;
             g.add(cargo);
         }
-        if (bp.doorPanel) {
-            const dp = new THREE.Mesh(CarGeoCache.box(bp.w + 0.02, 0.3, bp.len * 0.45), CarGeoCache.mat(bp.doorPanel));
-            dp.position.set(0, bp.y, 0.2);
-            g.add(dp);
-        }
-        if (bp.lightbar) {
-            this.lightbarParts = [];
-            const red = new THREE.Mesh(CarGeoCache.box(0.5, 0.16, 0.3), new THREE.MeshBasicMaterial({ color: 0xff2233 }));
-            red.position.set(-0.45, bp.y + bp.h / 2 + cab.h + 0.08, cab.z);
-            const blue = new THREE.Mesh(CarGeoCache.box(0.5, 0.16, 0.3), new THREE.MeshBasicMaterial({ color: 0x2244ff }));
-            blue.position.set(0.45, bp.y + bp.h / 2 + cab.h + 0.08, cab.z);
-            g.add(red); g.add(blue);
-            this.lightbarParts.push(red, blue);
-        }
+        // POLICE SYSTEM REMOVED — doorPanel / lightbar cruiser styling deleted
 
         // Head/tail lights
         const hl = new THREE.Mesh(CarGeoCache.box(0.35, 0.12, 0.06), lightMat);
@@ -2757,12 +2660,6 @@ class TrafficVehicle {
             w.children[0].rotation.x = this.wheelSpin;
             w.children[1].rotation.x = this.wheelSpin;
             if (w.userData.steerable) w.rotation.y = this.steering * 0.6;
-        }
-        if (this.lightbarParts) {
-            this.enginePhase += deltaTime * 10;
-            const s = Math.sin(this.enginePhase) > 0;
-            this.lightbarParts[0].visible = s;
-            this.lightbarParts[1].visible = !s;
         }
     }
 }
@@ -3249,8 +3146,7 @@ class WeaponSystem {
             if (d2 < 0.85) { best = ped; bestT = t; }
         }
         if (best) {
-            if (best.die()) this.game.onCrimeCommitted(1, false);
-            this.game.addMoney(CONFIG.moneyPerKill / 2);
+            best.die(); // POLICE SYSTEM REMOVED — no wanted/crime/bounty side effects
         }
     }
 
@@ -3270,7 +3166,7 @@ class WeaponSystem {
             const d = Math.hypot(dx, dz);
             if (d < 2.2) {
                 if (!fwd || (dx * fwd.x + dz * fwd.z) > -0.3) {
-                    if (ped.die()) g.onCrimeCommitted(1, false);
+                    ped.die(); // POLICE SYSTEM REMOVED — no wanted/crime side effects
                     break;
                 }
             }
@@ -3280,7 +3176,8 @@ class WeaponSystem {
 const playerPosHelper = new THREE.Vector3();
 
 // ============================================================
-// WORLD SYSTEMS MANAGER - pedestrians, roaming traffic, police pursuit
+// WORLD SYSTEMS MANAGER - pedestrians, roaming traffic
+// (POLICE SYSTEM REMOVED: no pursuit, dispatch, or wanted logic)
 // ============================================================
 class WorldSystems {
     constructor(game) {
@@ -3290,11 +3187,8 @@ class WorldSystems {
 
         this.pedestrians = [];
         this.traffic = [];
-        this.police = [];
         this.PED_COUNT = CONFIG.npcCount;
         this.TRAFFIC_COUNT = CONFIG.trafficCount;
-        this.MAX_POLICE = 4;
-        this.updateTimer = 0;
         this.frameNo = 0;
 
         for (let i = 0; i < this.PED_COUNT; i++) {
@@ -3337,25 +3231,7 @@ class WorldSystems {
         }
     }
 
-    spawnPoliceCar() {
-        const v = new TrafficVehicle(this.scene, this.world, 'police');
-        const pp = this.game.playerWorldPos;
-        const roads = this.world._roadPolylines;
-        let best = 0, bestD = Infinity;
-        for (let i = 0; i < roads.length; i++) {
-            const s = roads[i];
-            const mx = (s.x1 + s.x2) / 2, mz = (s.z1 + s.z2) / 2;
-            const d = Math.hypot(mx - pp.x, mz - pp.z);
-            if (d > 60 && d < bestD) { bestD = d; best = i; }
-        }
-        v.placeOnRoad(best);
-        this.police.push(v);
-    }
-
-    clearPolice() {
-        for (const cop of this.police) this.scene.remove(cop.mesh);
-        this.police.length = 0;
-    }
+    // POLICE SYSTEM REMOVED — spawnPoliceCar / clearPolice / copChase deleted
 
     update(deltaTime) {
         const game = this.game;
@@ -3388,67 +3264,16 @@ class WorldSystems {
             }
             if (d < 120) {
                 car.update(deltaTime, this.world, this.pedestrians);
-                // traffic runs over pedestrians
+                // traffic runs over pedestrians (POLICE SYSTEM REMOVED — no crime side effects)
                 for (const ped of this.pedestrians) {
                     if (ped.state === 'DEAD') continue;
                     if (Math.abs(car.speed) > 3 &&
                         Math.hypot(ped.position.x - car.position.x, ped.position.z - car.position.z) < 2.2) {
-                        if (ped.die()) game.onCrimeCommitted(1, true);
+                        ped.die();
                     }
                 }
             }
         }
-
-        // --- Police pursuit ---
-        this.updateTimer += deltaTime;
-        if (game.wantedLevel > 0) {
-            while (this.police.length < Math.min(this.MAX_POLICE, game.wantedLevel)) {
-                this.spawnPoliceCar();
-            }
-            for (const cop of this.police) {
-                if (cop.isOccupied) continue;
-                this.copChase(cop, deltaTime, pp);
-            }
-            // cops shoot when close (throttled)
-            if (this.updateTimer > 0.8) {
-                this.updateTimer = 0;
-                for (const cop of this.police) {
-                    const d = Math.hypot(cop.position.x - pp.x, cop.position.z - pp.z);
-                    if (d < 12 && !game.isDead) game.damagePlayer(4, 'cop');
-                }
-            }
-        } else if (this.police.length) {
-            // wanted cleared -> cruisers withdraw and despawn
-            for (const cop of this.police) {
-                cop.speed *= 0.98;
-                cop.applyTransform(deltaTime);
-            }
-            this.clearPolice();
-        }
-    }
-
-    copChase(cop, dt, pp) {
-        const eng = cop.bp.engine;
-        const dx = pp.x - cop.position.x, dz = pp.z - cop.position.z;
-        const dist = Math.hypot(dx, dz);
-        const targetAngle = Math.atan2(-dx, -dz);
-        let diff = targetAngle - cop.rotation;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        cop.steering = THREE.MathUtils.clamp(diff * 1.6, -0.5, 0.5);
-        if (Math.abs(cop.speed) > 0.3) {
-            cop.rotation += cop.steering * (cop.speed / eng.maxSpeed) * eng.grip * dt;
-        }
-        const cruise = dist > 8 ? eng.maxSpeed * 0.85 : 0;
-        if (cop.speed < cruise) cop.speed = Math.min(cruise, cop.speed + eng.accel * dt);
-        else cop.speed *= Math.pow(0.9, dt * 60);
-        cop.position.x += -Math.sin(cop.rotation) * cop.speed * dt;
-        cop.position.z += -Math.cos(cop.rotation) * cop.speed * dt;
-        cop.position.y = 0.12;
-        if (dist < 3.2 && Math.abs(cop.speed) > 4 && !this.game.isDead) {
-            this.game.damagePlayer(8, 'ram');
-        }
-        cop.applyTransform(dt);
     }
 }
 
@@ -12428,7 +12253,6 @@ class OutboundGame {
         consider('car', this.playerCar);
         if (this.worldSystems) {
             for (const t of this.worldSystems.traffic) consider('car', t);
-            for (const p of this.worldSystems.police) consider('car', p);
         }
         consider('heli', this.helicopter);
         return best;
@@ -12542,14 +12366,12 @@ class OutboundGame {
             this.world.collisionSystem.addCollider(this.vehicle.collider);
         }
 
-        // Initialize world systems (pedestrians, roaming traffic, police)
+        // Initialize world systems (pedestrians, roaming traffic)
         this.worldSystems = null; // created after HUD refs exist
 
-        // Health / money / wanted state
+        // Health / money state (POLICE SYSTEM REMOVED — no wanted state)
         this.health = CONFIG.maxHealth;
         this.money = 500;
-        this.wantedLevel = 0;
-        this.wantedTimer = 0;
         this.timeSinceDamage = 999;
         this.isDead = false;
         this.respawnTimer = 0;
@@ -12562,14 +12384,12 @@ class OutboundGame {
         // HUD element refs
         this.hudHealthFill = document.getElementById('health-bar-fill');
         this.hudMoney = document.getElementById('money-display');
-        this.hudWanted = document.getElementById('wanted-stars');
         this.hudAmmo = document.getElementById('ammo-text');
         this.hudDamageFlash = document.getElementById('damage-flash');
         this.hudDeathOverlay = document.getElementById('death-overlay');
         this.hudRespawnTimer = document.getElementById('respawn-timer');
         this.updateHealthHUD();
         this.updateMoneyHUD();
-        this.updateWantedHUD();
 
         // Weapon system (single pistol) — created last, after all game state exists
         try {
@@ -12646,8 +12466,6 @@ class OutboundGame {
     respawn() {
         this.isDead = false;
         this.health = CONFIG.maxHealth;
-        this.wantedLevel = 0;
-        this.wantedTimer = 0;
         this.money = Math.max(0, Math.floor(this.money * 0.75)); // medical fees
         this.controller.position.set(0, this.world.getGroundHeight(0, 0), 0);
         this.controller.velocity.set(0, 0, 0);
@@ -12656,11 +12474,10 @@ class OutboundGame {
         if (this.hudDeathOverlay) this.hudDeathOverlay.classList.remove('active');
         this.updateHealthHUD();
         this.updateMoneyHUD();
-        this.updateWantedHUD();
     }
 
     // ----------------------------------------------------------
-    // MONEY & WANTED SYSTEMS
+    // MONEY SYSTEM (POLICE / WANTED SYSTEM REMOVED)
     // ----------------------------------------------------------
     addMoney(amount) {
         this.money = Math.max(0, Math.min(999999, this.money + Math.round(amount)));
@@ -12669,20 +12486,6 @@ class OutboundGame {
 
     updateMoneyHUD() {
         if (this.hudMoney) this.hudMoney.textContent = '$' + this.money.toLocaleString();
-    }
-
-    updateWantedHUD() {
-        if (!this.hudWanted) return;
-        let s = '';
-        for (let i = 0; i < 5; i++) s += i < this.wantedLevel ? '★' : '<span style="opacity:0.25">★</span>';
-        this.hudWanted.innerHTML = s;
-    }
-
-    onCrimeCommitted(stars, cashBounty) {
-        this.wantedLevel = Math.min(5, this.wantedLevel + stars);
-        this.wantedTimer = 0;
-        if (cashBounty) this.addMoney(CONFIG.moneyPerKill);
-        this.updateWantedHUD();
     }
 
     updateAmmoHUD() {
