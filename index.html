@@ -416,21 +416,35 @@
         /* Keep ammo readout clear of the speedometer (which sits above it while driving) */
         body.has-speedo #ammo-display { bottom: 150px; }
 
-        /* Crime bar (1..100) */
+        /* Crime bar (0..100) — authoritative state lives ONLY in CrimeManager.
+           Hidden entirely while the state is NONE (fresh load = no crime UI). */
         #crime-wrap {
             position: absolute;
             top: 48px;
             right: 20px;
             width: 150px;
             pointer-events: none;
+            opacity: 0;
+            transform: translateY(-4px);
+            transition: opacity 0.35s ease;
+        }
+        #crime-wrap.active { opacity: 1; transform: none; }
+        #crime-reason {
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            margin-bottom: 2px;
+            text-align: right;
+            min-height: 11px;
+            color: rgba(255,255,255,0.8);
+            text-shadow: 0 1px 2px #000;
         }
         #crime-label {
-            color: rgba(255,255,255,0.75);
             font-size: 10px;
             letter-spacing: 2px;
             margin-bottom: 3px;
             text-align: right;
             text-shadow: 0 1px 2px #000;
+            transition: color 0.6s ease;
         }
         #crime-bar-bg {
             width: 100%;
@@ -443,8 +457,36 @@
         #crime-bar-fill {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, #ffb300, #e53935);
-            transition: width 0.3s ease;
+            background: #ffffff;
+            box-shadow: 0 0 8px rgba(255,255,255,0.5);
+            transition: width 0.3s ease, background-color 0.6s ease, box-shadow 0.6s ease;
+        }
+        /* State colors: BLUE suspect · WHITE searching · RED visual confirmation */
+        #crime-wrap.state-blue  #crime-label { color: #6ea8ff; }
+        #crime-wrap.state-white #crime-label { color: #f2f5ff; }
+        #crime-wrap.state-red   #crime-label { color: #ff5252; }
+        #crime-wrap.state-blue  #crime-bar-fill { background: #448aff; box-shadow: 0 0 8px rgba(68,138,255,0.7); }
+        #crime-wrap.state-white #crime-bar-fill { background: #e8eaf6; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
+        #crime-wrap.state-red   #crime-bar-fill { background: #e53935; box-shadow: 0 0 10px rgba(229,57,53,0.8); }
+        /* Developer crime debug panel (toggle with window.__outbound.debugCrime(true)) */
+        #crime-debug {
+            position: absolute;
+            top: 120px;
+            left: 12px;
+            z-index: 30;
+            max-width: 320px;
+            max-height: 46vh;
+            overflow: hidden;
+            background: rgba(0, 8, 16, 0.82);
+            border: 1px solid rgba(0, 255, 160, 0.4);
+            border-radius: 8px;
+            padding: 8px 10px;
+            color: #7dffc9;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.5;
+            white-space: pre;
+            pointer-events: none;
         }
         /* Weapon wheel */
         #weapon-wheel {
@@ -874,11 +916,12 @@
             <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
         </div>
         <div id="money-display">$0</div>
-        <div id="wanted-stars">★★★★★</div>
-        <div id="crime-wrap">
+        <div id="crime-wrap" class="state-none">
+            <div id="crime-reason"></div>
             <div id="crime-label">CRIME 0</div>
             <div id="crime-bar-bg"><div id="crime-bar-fill"></div></div>
         </div>
+        <div id="crime-debug" style="display:none"></div>
         <div id="ammo-display"><small id="weapon-name">PISTOL · LMB FIRE · R RELOAD · TAB WHEEL</small><span id="ammo-text">∞</span></div>
         <div id="damage-flash"></div>
         <div id="gps-toast"></div>
@@ -1010,12 +1053,11 @@ const CONFIG = {
     healthRegenDelay: 12.0,     // seconds without damage before regen starts
     healthRegenRate: 4.0,       // HP per second while regenerating
 
-    // Combat / wanted system
+    // Combat system (wanted/crime configuration lives in CRIME_CONFIG below —
+    // the star system and its auto-wanted triggers have been REMOVED)
     gunDamage: 34,              // base pistol damage per shot (3 shots to kill)
-    moneyPerKill: 50,           // bounty cash reward
-    trafficHitWanted: 1,        // wanted stars for running over a pedestrian
-    crimeDecayRate: 1.6,        // crime points shed per second while staying clean
-    arrestRadius: 3.2,          // how close a cop must get to cuff you
+    moneyPerKill: 0,            // NO automatic cash bounties (money is event-driven only)
+    arrestRadius: 3.2,          // how close an officer must get to cuff you
     // NPC AI / environment interaction
     npcCount: 130,              // total pedestrians roaming the map (visible population)
     trafficCount: 24,           // ambient AI-driven cars
