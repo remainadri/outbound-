@@ -5938,6 +5938,11 @@ class World {
         this.scene = scene;
         this.streetLights = [];
         this.windowLights = [];
+        // Residential door registry (populated by _addResidentialDoors):
+        // { group, pivot, worldPos(Vector3), facingY, home } — NPCs emerge from these.
+        this.residentialDoors = [];
+        // Every window material of every building; all of them glow at night.
+        this._glowMats = [];
         this._prevIsNight = null;
 
         // Performance systems
@@ -6010,6 +6015,96 @@ class World {
             this._matCache.set(color, new THREE.MeshLambertMaterial({ color, flatShading: true }));
         }
         return this._matCache.get(color);
+    }
+
+    // Warm emissive glass used by ALL residential/apartment windows so the
+    // whole city glows at night (driven by updateLights via this._glowMats).
+    _glowGlassMat() {
+        if (!this._sharedGlowGlass) {
+            const m = new THREE.MeshLambertMaterial({
+                color: 0x9FD8E8, transparent: true, opacity: 0.95,
+                emissive: 0xffc46b, emissiveIntensity: 0
+            });
+            this._sharedGlowGlass = m;
+            this._glowMats.push(m);
+        }
+        return this._sharedGlowGlass;
+    }
+
+    // Attach 2–3 animated front doors to a residential building group and
+    // register their world positions as NPC spawn/exit points.
+    _addResidentialDoors(g, w, d, rotY, wx, wz, n) {
+        if (!this._doorFrameGeo) {
+            this._doorFrameGeo = new THREE.BoxGeometry(1.15, 2.15, 0.14);
+            this._doorLeafGeo  = new THREE.BoxGeometry(1.0, 2.0, 0.1);
+            this._doorHandleGeo= new THREE.BoxGeometry(0.07, 0.07, 0.06);
+            this._doorFrameMat = new THREE.MeshLambertMaterial({ color: 0x2E2419, flatShading: true });
+            this._doorLeafMat  = new THREE.MeshLambertMaterial({ color: 0x7A4A2B, flatShading: true });
+            this._doorLeafMat2 = new THREE.MeshLambertMaterial({ color: 0x4E342E, flatShading: true });
+            this._doorHandleMat= new THREE.MeshLambertMaterial({ color: 0xD4AF37 });
+        }
+        const slots = [-0.32, 0.32, 0.0];
+        const zs = d / 2 + 0.02;
+        for (let i = 0; i < n; i++) {
+            const dx = w * slots[i % 3] + (i > 2 ? 0.6 : 0);
+            const frame = new THREE.Mesh(this._doorFrameGeo, this._doorFrameMat);
+            frame.position.set(dx, 1.08, zs);
+            g.add(frame);
+            const pivot = new THREE.Group();
+            pivot.position.set(dx - 0.5, 0, zs + 0.06);
+            const leaf = new THREE.Mesh(this._doorLeafGeo, i % 2 ? this._doorLeafMat : this._doorLeafMat2);
+            leaf.position.set(0.5, 1.0, 0.02);
+            pivot.add(leaf);
+            const handle = new THREE.Mesh(this._doorHandleGeo, this._doorHandleMat);
+            handle.position.set(0.88, 1.0, 0.1);
+            pivot.add(handle);
+            g.add(pivot);
+            // world position just outside the doorway (on the sidewalk side)
+            const s = Math.sin(rotY || 0), c = Math.cos(rotY || 0);
+            const lx = dx, lz = zs + 1.1;
+            const gx = wx + lx * c + lz * s;
+            const gz = wz - lx * s + lz * c;
+            const gy = this.getGroundHeight(gx, gz);
+            this.residentialDoors.push({
+                group: g, pivot,
+                worldPos: new THREE.Vector3(gx, gy, gz),
+                facingY: rotY || 0,
+                open: 0, target: 0, timer: 0
+            });
+        }
+    }
+
+    // Animate door leaves (swing open/closed) — called each frame from game loop.
+    animateDoors(dt) {
+        const doors = this.residentialDoors;
+        for (let i = 0; i < doors.length; i++) {
+            const dr = doors[i];
+            if (dr.open === dr.target) continue;
+            const dir = dr.target > dr.open ? 1 : -1;
+            dr.open += dir * Math.min(Math.abs(dr.target - dr.open), dt * 2.4);
+            dr.pivot.rotation.y = -Math.max(0, dr.open) * 1.9; // ~110° swing
+        }
+    }
+
+    openDoor(idx) {
+        const dr = this.residentialDoors[idx];
+        if (!dr) return;
+        dr.target = 1;
+        dr.timer = 2.2;
+    }
+
+    boxBlocks(x, z, pad) {
+        // True when point (x,z) is inside any registered building collider.
+        const cs = this.collisionSystem;
+        if (!cs || !cs.colliders) return false;
+        for (const c of cs.colliders) {
+            if (!c || c.type !== 'box') continue;
+            const hw = (c.width || 0) / 2 + pad, hd = (c.depth || 0) / 2 + pad;
+            if (hw < 1.2 || hd < 1.2) continue; // ignore tiny props
+            if (x > c.position.x - hw && x < c.position.x + hw &&
+                z > c.position.z - hd && z < c.position.z + hd) return true;
+        }
+        return false;
     }
 
     _box(group, w, h, d, x, y, z, color, cast = true) {
@@ -7236,16 +7331,18 @@ class World {
             const g = new THREE.Group();
             this._box(g, w, h, d, 0, h / 2, 0, col);
             this._box(g, w + 0.3, 0.35, d + 0.3, 0, h + 0.15, 0, 0x616161);
-            const glass = 0x90CAF9;
+            const glass = this._glowGlassMat();
             const cols = Math.max(2, Math.floor(w / 4));
             const rows = Math.max(1, Math.floor(h / 3.2));
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
                     const wx = -w / 2 + 2 + c * (w / cols);
-                    this._box(g, 1.6, 1.6, 0.1, wx, 1.8 + r * 2.8, d / 2 + 0.05, glass, false);
+                    const win = this._box(g, 1.6, 1.6, 0.1, wx, 1.8 + r * 2.8, d / 2 + 0.05, 0xffffff, false);
+                    win.material = glass; // shared glowing-at-night glass
                 }
             }
             this._placeGroup(g, bx, bz, 0, w, h + 1, d);
+            this._addResidentialDoors(g, w, d, 0, bx, bz, 3);
         });
     }
 
@@ -7271,8 +7368,9 @@ class World {
             roof.rotation.y = Math.PI / 4;
             roof.castShadow = true;
             g.add(roof);
-            this._box(g, 1.1, 1.8, 0.1, 0, 1.0, 3.05, 0x5D4037, false);
-            this._placeGroup(g, hx, hz, (i % 4) * 0.4, 8, 6, 7);
+            const hrot = (i % 4) * 0.4;
+            this._placeGroup(g, hx, hz, hrot, 8, 6, 7);
+            this._addResidentialDoors(g, 7, 6, hrot, hx, hz, 3);
         });
     }
 
@@ -7478,16 +7576,18 @@ class World {
         const w = 16, h = 15, d = 12;
         this._box(g, w, h, d, 0, h / 2, 0, col);
         this._box(g, w + 0.4, 0.5, d + 0.4, 0, h + 0.25, 0, 0x5A4636);
+        const aptGlass = this._glowGlassMat();
         for (let r = 0; r < 4; r++) {
             for (let c = 0; c < 4; c++) {
-                this._box(g, 2.2, 2.0, 0.12, -w / 2 + 2.5 + c * 3.7, 2.6 + r * 3.2, d / 2 + 0.06, 0x2E3B4E, false);
+                const win = this._box(g, 2.2, 2.0, 0.12, -w / 2 + 2.5 + c * 3.7, 2.6 + r * 3.2, d / 2 + 0.06, 0xffffff, false);
+                win.material = aptGlass;
                 // balcony slab on two columns
                 if ((r + c) % 2 === 0) this._box(g, 2.6, 0.15, 1.1, -w / 2 + 2.5 + c * 3.7, 1.6 + r * 3.2, d / 2 + 0.6, 0x8D6E4C, false);
             }
         }
-        this._box(g, 3, 3.4, 0.2, 0, 1.7, d / 2 + 0.08, 0x3E2723, false); // entrance
         this._box(g, 2, 1.6, 2, -5, h + 1.1, -3, 0x777777, false);        // rooftop tank housing
         this._placeGroup(g, x, z, 0, w, h + 2, d);
+        this._addResidentialDoors(g, w, d, 0, x, z, 3);
     }
 
     _townhouse(x, z, rot, variant) {
@@ -7497,11 +7597,12 @@ class World {
         const roof = new THREE.Mesh(new THREE.BoxGeometry(7, 0.5, 7.5), this._mat(0x5D4037));
         roof.position.y = 7 + variant;
         g.add(roof);
-        this._box(g, 1.2, 2.2, 0.12, -1.4, 1.2, 3.56, 0x3E2723, false);
-        this._box(g, 1.6, 1.6, 0.12, 1.5, 4.2, 3.56, 0x9FD8E8, false);
+        const thWin = this._box(g, 1.6, 1.6, 0.12, 1.5, 4.2, 3.56, 0xffffff, false);
+        thWin.material = this._glowGlassMat();
         // stoop steps
         this._box(g, 2, 0.2, 0.6, -1.4, 0.1, 4.0, 0x9E9E9E, false);
         this._placeGroup(g, x, z, rot, 7.5, 9, 8);
+        this._addResidentialDoors(g, 6.5, 7, rot, x, z, 2);
     }
 
     _villa(x, z, rot) {
@@ -7511,13 +7612,16 @@ class World {
         const roof = new THREE.Mesh(new THREE.ConeGeometry(8.5, 2.6, 4), this._mat(0xA0522D));
         roof.position.set(0, 6.6, 0); roof.rotation.y = Math.PI / 4; roof.scale.z = 0.75; roof.castShadow = true;
         g.add(roof);
-        this._box(g, 2, 2.6, 0.15, 0, 1.3, 4.56, 0x4E342E, false);
-        for (let i = -1; i <= 1; i += 2) this._box(g, 1.6, 1.6, 0.12, i * 3.6, 3.2, 4.56, 0x9FD8E8, false);
+        for (let i = -1; i <= 1; i += 2) {
+            const vw = this._box(g, 1.6, 1.6, 0.12, i * 3.6, 3.2, 4.56, 0xffffff, false);
+            vw.material = this._glowGlassMat();
+        }
         // pool in backyard
         const pool = new THREE.Mesh(new THREE.BoxGeometry(6, 0.2, 4), this._mat(0x29B6F6));
         pool.position.set(0, 0.05, -8);
         g.add(pool);
         this._placeGroup(g, x, z, rot, 14, 9, 20);
+        this._addResidentialDoors(g, 12, 9, rot, x, z, 3);
     }
 
     _oldTownSquare(cx, cz) {
@@ -7674,10 +7778,14 @@ class World {
         const g = new THREE.Group();
         this._box(g, 12, 12, 10, 0, 6, 0, 0xA87E5A);
         this._box(g, 12.4, 0.5, 10.4, 0, 12.2, 0, 0x5D4037);
-        for (let r = 0; r < 3; r++) for (let c = -1; c <= 1; c++)
-            this._box(g, 2.2, 1.8, 0.12, c * 3.4, 2.8 + r * 3.2, 5.06, 0x9FD8E8, false);
+        const dormGlass = this._glowGlassMat();
+        for (let r = 0; r < 3; r++) for (let c = -1; c <= 1; c++) {
+            const dw = this._box(g, 2.2, 1.8, 0.12, c * 3.4, 2.8 + r * 3.2, 5.06, 0xffffff, false);
+            dw.material = dormGlass;
+        }
         this._minimapLandmarks.push({ x, z, c: "#A87E5A" });
         this._placeGroup(g, x, z, 0, 13, 13, 11);
+        this._addResidentialDoors(g, 12, 10, 0, x, z, 3);
     }
 
     _gasStation(x, z) {
