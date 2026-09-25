@@ -1,907 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="screen-orientation" content="landscape">
-    <meta name="x5-orientation" content="landscape">
-    <title>OUTBOUND - Character Prototype</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            overflow: hidden;
-            background: #000;
-            font-family: 'Courier New', monospace;
-        }
-        canvas {
-            display: block;
-        }
-        #ui {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-        #title {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #fff;
-            font-size: 28px;
-            font-weight: bold;
-            letter-spacing: 6px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.3);
-        }
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            color: rgba(255,255,255,0.7);
-            font-size: 12px;
-            line-height: 1.8;
-        }
-        #state {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #0f0;
-            font-size: 14px;
-            text-align: left;
-            text-shadow: 0 0 5px rgba(0,255,0,0.5);
-        }
-        #time-display {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: #fff;
-            font-size: 16px;
-            text-align: right;
-            text-shadow: 0 0 5px rgba(255,255,255,0.5);
-        }
-        #crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 4px;
-            height: 4px;
-            background: rgba(255,255,255,0.4);
-            border-radius: 50%;
-        }
-        /* Health bar */
-        #health-wrap {
-            position: absolute;
-            bottom: 24px;
-            left: 20px;
-            width: 190px;
-            pointer-events: none;
-        }
-        #health-label {
-            color: #fff;
-            font-size: 11px;
-            letter-spacing: 2px;
-            margin-bottom: 4px;
-            text-shadow: 0 1px 2px #000;
-        }
-        #health-bar-bg {
-            width: 100%;
-            height: 14px;
-            background: rgba(0,0,0,0.6);
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 7px;
-            overflow: hidden;
-        }
-        #health-bar-fill {
-            height: 100%;
-            width: 100%;
-            background: linear-gradient(90deg, #43a047, #66bb6a);
-            border-radius: 7px;
-            transition: width 0.2s ease;
-        }
-        #health-bar-fill.low { background: linear-gradient(90deg, #e53935, #ef5350); }
-        #health-bar-fill.mid { background: linear-gradient(90deg, #fb8c00, #ffa726); }
-        /* Money (star system removed — replaced by the CRIME BAR below) */
-        #money-display {
-            position: absolute;
-            top: 72px;
-            right: 20px;
-            color: #7CFC8A;
-            font-size: 18px;
-            font-weight: bold;
-            text-shadow: 0 0 6px rgba(0,255,100,0.4), 0 1px 2px #000;
-            text-align: right;
-        }
-        /* Ammo / weapon */
-        #ammo-display {
-            position: absolute;
-            bottom: 24px;
-            right: 20px;
-            color: #fff;
-            font-size: 16px;
-            text-align: right;
-            text-shadow: 0 1px 2px #000;
-        }
-        #ammo-display small { display: block; font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 2px; }
-        /* Damage flash + death overlay */
-        #damage-flash {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(ellipse at center, transparent 40%, rgba(200,0,0,0.45) 100%);
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-        #death-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10,0,0,0.75);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 14px;
-            color: #fff;
-        }
-        #death-overlay h2 { font-size: 40px; letter-spacing: 8px; color: #e53935; }
-        #respawn-timer { font-size: 18px; }
-        /* Minimal HUD container in top-left, below the state line */
-        #hud-prompts {
-            position: absolute;
-            top: 64px;
-            left: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            pointer-events: none;
-        }
-        .hud-prompt {
-            color: #fff;
-            font-size: 13px;
-            background: rgba(0,0,0,0.6);
-            padding: 8px 12px;
-            border-radius: 4px;
-            border-left: 3px solid rgba(255,255,255,0.3);
-            backdrop-filter: blur(4px);
-            transition: opacity 0.3s ease;
-        }
-        .hud-prompt.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-        .hud-prompt small {
-            display: block;
-            font-size: 11px;
-            color: rgba(255,255,255,0.6);
-            margin-top: 4px;
-        }
-        #click-prompt {
-            border-left-color: rgba(0,255,255,0.5);
-        }
-        #vehicle-prompt {
-            border-left-color: rgba(0,255,0,0.5);
-        }
-        #helicopter-prompt {
-            border-left-color: rgba(255,165,0,0.5);
-        }
-        /* Mobile Controls */
-        #mobile-controls {
-            display: none;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 20;
-        }
 
-        #mobile-controls.active {
-            display: block;
-        }
-
-        #joystick-container {
-            position: absolute;
-            bottom: 40px;
-            left: 40px;
-            width: 120px;
-            height: 120px;
-            pointer-events: auto;
-        }
-
-        #joystick-base {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.15);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            backdrop-filter: blur(10px);
-        }
-
-        #joystick-thumb {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.4);
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            transition: background 0.1s;
-        }
-
-        #joystick-thumb.active {
-            background: rgba(255, 255, 255, 0.6);
-        }
-
-        .mobile-button {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            color: #fff;
-            font-size: 24px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: auto;
-            backdrop-filter: blur(10px);
-            user-select: none;
-            -webkit-user-select: none;
-            transition: background 0.1s;
-        }
-
-        .mobile-button:active, .mobile-button.active {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        #btn-enter-car {
-            bottom: 40px;
-            right: 40px;
-        }
-
-        #btn-jump {
-            bottom: 130px;
-            right: 40px;
-        }
-
-        #btn-run {
-            bottom: 40px;
-            right: 130px;
-        }
-
-        #camera-touch-area {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 50%;
-            height: 100%;
-            pointer-events: auto;
-        }
-
-        /* Portrait mode warning */
-        #portrait-warning {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            color: #fff;
-            text-align: center;
-            padding: 20px;
-        }
-
-        #portrait-warning .rotate-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            animation: rotatePhone 2s ease-in-out infinite;
-        }
-
-        #portrait-warning .message {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        #portrait-warning .submessage {
-            font-size: 16px;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        @keyframes rotatePhone {
-            0%, 100% { transform: rotate(0deg); }
-            50% { transform: rotate(90deg); }
-        }
-
-        /* Show portrait warning on mobile in portrait mode */
-        @media screen and (orientation: portrait) {
-            #portrait-warning {
-                display: flex !important;
-            }
-
-            #mobile-controls {
-                display: none !important;
-            }
-        }
-
-        /* Landscape mode optimizations for mobile */
-        @media screen and (orientation: landscape) and (max-height: 500px) {
-            #joystick-container {
-                bottom: 20px;
-                left: 20px;
-                width: 100px;
-                height: 100px;
-            }
-
-            #joystick-thumb {
-                width: 40px;
-                height: 40px;
-            }
-
-            .mobile-button {
-                width: 60px;
-                height: 60px;
-                font-size: 20px;
-            }
-
-            #btn-enter-car {
-                bottom: 20px;
-                right: 20px;
-            }
-
-            #btn-jump {
-                bottom: 100px;
-                right: 20px;
-            }
-
-            #btn-run {
-                bottom: 20px;
-                right: 100px;
-            }
-
-            #title {
-                font-size: 20px;
-                top: 10px;
-                left: 10px;
-            }
-
-            #state {
-                font-size: 12px;
-                top: 10px;
-                right: 10px;
-            }
-
-            #time-display {
-                font-size: 14px;
-                top: 30px;
-                right: 10px;
-            }
-
-            #controls {
-                display: none;
-            }
-        }
-
-        /* NOTE: duplicate #vehicle-prompt modal CSS removed — HUD style above wins */
-        /* Helicopter help uses the same top-left HUD stack as other prompts (no centering, no overlap) */
-        #speedometer {
-            position: absolute;
-            bottom: 64px;
-            right: 20px;
-            text-align: center;
-            background: rgba(0,0,0,0.7);
-            padding: 12px 22px;
-            border: 1px solid rgba(0,255,0,0.5);
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,255,0,0.3);
-        }
-        /* Keep ammo readout clear of the speedometer (which sits above it while driving) */
-        body.has-speedo #ammo-display { bottom: 150px; }
-
-        /* POLICE SYSTEM REMOVED — crime bar / wanted UI styles deleted */
-        /* Weapon wheel */
-        #weapon-wheel {
-            position: fixed;
-            inset: 0;
-            z-index: 25;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.15s ease;
-        }
-        #weapon-wheel.active { opacity: 1; }
-        .ww-slot {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            width: 128px;
-            height: 128px;
-            margin-left: -64px;
-            margin-top: -64px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 35% 30%, rgba(45,55,75,0.95), rgba(10,14,22,0.95));
-            border: 2px solid rgba(255,255,255,0.25);
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            font-family: 'Courier New', monospace;
-            transform: translate(var(--tx, 0px), var(--ty, 0px));
-        }
-        .ww-icon { font-size: 40px; line-height: 1; filter: drop-shadow(0 0 4px rgba(0,0,0,0.8)); }
-        .ww-name { font-size: 10px; letter-spacing: 1px; text-align: center; text-shadow: 0 1px 2px #000; }
-        .ww-key { font-size: 9px; color: #ffd54f; letter-spacing: 1px; }
-        .ww-slot.sel {
-            border-color: #ffd54f;
-            background: radial-gradient(circle at 35% 30%, rgba(120,100,30,0.98), rgba(40,32,8,0.98));
-            transform: translate(var(--tx, 0px), var(--ty, 0px)) scale(1.12);
-            box-shadow: 0 0 24px rgba(255,200,60,0.6);
-        }
-        /* Aim reticle (right-click ADS) */
-        #aim-reticle {
-            position: fixed;
-            left: 50%; top: 50%;
-            width: 26px; height: 26px;
-            margin: -13px 0 0 -13px;
-            pointer-events: none;
-            z-index: 35;
-            display: none;
-        }
-        #aim-reticle.on { display: block; }
-        #aim-reticle::before, #aim-reticle::after { content: ""; position: absolute; background: rgba(255,80,80,0.9); }
-        #aim-reticle::before { left: 50%; top: 0; width: 2px; height: 100%; margin-left: -1px; }
-        #aim-reticle::after { top: 50%; left: 0; height: 2px; width: 100%; margin-top: -1px; }
-        body.aiming #aim-reticle::before { height: 62%; top: 19%; }
-        body.aiming #aim-reticle::after { width: 62%; left: 19%; }
-        #weapon-wheel-title {
-            position: absolute;
-            left: 50%;
-            top: calc(50% - 250px);
-            transform: translateX(-50%);
-            color: #fff;
-            font-size: 15px;
-            letter-spacing: 4px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.4), 0 1px 2px #000;
-        }
-        /* GPS toast */
-        #gps-toast {
-            position: absolute;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #4fc3f7;
-            font-size: 13px;
-            letter-spacing: 2px;
-            text-shadow: 0 0 8px rgba(79,195,247,0.6), 0 1px 2px #000;
-            opacity: 0;
-            transition: opacity 0.4s;
-            pointer-events: none;
-        }
-        #gps-toast.show { opacity: 1; }
-        /* Fullscreen map (press Q) */
-        #bigmap {
-            position: fixed;
-            inset: 0;
-            z-index: 30;
-            background: rgba(4, 8, 12, 0.92);
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Courier New', monospace;
-        }
-        #bigmap.active { display: flex; }
-        #bigmap-header {
-            color: #fff;
-            font-size: 18px;
-            letter-spacing: 6px;
-            margin-bottom: 10px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.3);
-        }
-        #bigmap-hint {
-            color: rgba(255,255,255,0.6);
-            font-size: 11px;
-            letter-spacing: 2px;
-            margin-top: 10px;
-        }
-        #bigmap-canvas {
-            width: min(78vmin, 640px);
-            height: min(78vmin, 640px);
-            border: 2px solid rgba(255,255,255,0.35);
-            border-radius: 10px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.8);
-            cursor: crosshair;
-            pointer-events: auto;
-        }
-        /* Minimap — bottom-right, stacked under the ammo/speedometer readouts */
-        #minimap-wrap {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 128px;
-            height: 128px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.35);
-            box-shadow: 0 0 12px rgba(0,0,0,0.5);
-            background: rgba(20, 40, 30, 0.85);
-            pointer-events: none;
-            z-index: 15;
-        }
-        #minimap {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        #minimap-player {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            margin-left: -4px;
-            margin-top: -4px;
-            background: #0f0;
-            border: 1px solid #fff;
-            border-radius: 50%;
-            box-shadow: 0 0 6px #0f0;
-            pointer-events: none;
-        }
-        @media screen and (orientation: landscape) and (max-height: 500px) {
-            #minimap-wrap {
-                width: 96px;
-                height: 96px;
-                bottom: 10px;
-                right: 10px;
-            }
-            /* On small landscape screens the mobile buttons own the bottom-right,
-               so park the minimap top-right instead (under the crime bar). */
-            body.outbound-mobile #minimap-wrap {
-                bottom: auto;
-                top: 120px;
-                right: 10px;
-            }
-            body.outbound-playing:not(.outbound-mobile) #controls {
-                font-size: 10px;
-                line-height: 1.45;
-                bottom: 12px;
-                left: 12px;
-                max-width: 320px;
-            }
-        }
-
-        /* Mobile buttons must sit above camera-touch-area */
-        .mobile-button {
-            z-index: 30;
-        }
-        #joystick-container {
-            z-index: 30;
-        }
-        #camera-touch-area {
-            /* Leave bottom free for jump / F / run buttons */
-            height: calc(100% - 160px);
-        }
-
-        /* ---- OUTBOUND overlay / mobile / boot (additive) ---- */
-        html, body, canvas { touch-action: none; }
-        #death-overlay.active { display: flex !important; }
-        #boot-screen {
-            position: fixed; inset: 0; z-index: 2000;
-            background: #0a0a0b;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            gap: 18px; color: #f4f4f5;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-        }
-        #boot-screen.hidden { display: none; }
-        #boot-screen .boot-mark {
-            letter-spacing: 0.55em; font-size: 22px; font-weight: 600;
-            text-indent: 0.55em;
-        }
-        #boot-screen .boot-bar {
-            width: 180px; height: 2px; background: #1a1a1e; overflow: hidden;
-        }
-        #boot-screen .boot-bar > span {
-            display: block; height: 100%; width: 40%; background: #c8ccd4;
-            animation: bootSlide 1.1s ease-in-out infinite;
-        }
-        @keyframes bootSlide {
-            0% { transform: translateX(-120%); }
-            100% { transform: translateX(340%); }
-        }
-        #boot-screen .boot-sub {
-            font-size: 12px; letter-spacing: 0.28em; color: #71717a; text-transform: uppercase;
-        }
-        #mobile-hints {
-            display: none;
-            position: absolute;
-            top: 10px; left: 50%;
-            transform: translateX(-50%);
-            max-width: min(92vw, 720px);
-            text-align: center;
-            color: rgba(244,244,245,0.92);
-            font-size: 11px;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            text-shadow: 0 1px 3px #000;
-            background: rgba(10,10,11,0.55);
-            border: 1px solid rgba(244,244,245,0.14);
-            padding: 8px 14px;
-            border-radius: 999px;
-            pointer-events: none;
-            z-index: 16;
-        }
-        #btn-fire {
-            bottom: 36px; right: 28px;
-            width: 84px; height: 84px;
-            background: rgba(180, 40, 40, 0.42);
-            border-color: rgba(255, 160, 160, 0.45);
-            font-size: 13px; letter-spacing: 0.16em;
-            z-index: 31;
-        }
-        #btn-reload {
-            bottom: 130px; right: 118px;
-            z-index: 31;
-        }
-        #mobile-controls.active #btn-enter-car { bottom: 36px; right: 124px; }
-        #mobile-controls.active #btn-jump { bottom: 130px; right: 28px; }
-        #mobile-controls.active #btn-run { bottom: 36px; right: 214px; }
-        #mobile-controls.active #camera-touch-area {
-            height: calc(100% - 220px);
-            width: 55%;
-        }
-        body.outbound-mobile #mobile-hints { display: block; }
-        body.outbound-mobile #controls { display: none; }
-        body.outbound-mobile #title { font-size: 16px; letter-spacing: 4px; top: 48px; }
-        /* Mobile: minimap moves to the right side under the money/wanted/crime stack,
-           ammo sits directly above it, and the speedo/alt readout docks at the top-right
-           so nothing ever covers anything else (joystick/buttons own the bottom corners). */
-        body.outbound-mobile #minimap-wrap {
-            bottom: 20px;
-            top: auto;
-            right: 20px;
-        }
-        body.outbound-mobile #ammo-display { bottom: 158px; right: 20px; }
-        body.outbound-mobile.has-speedo #ammo-display { bottom: 158px; }
-        body.outbound-mobile #speedometer {
-            bottom: auto;
-            top: 130px;
-            right: 20px;
-            padding: 8px 18px;
-        }
-        body.outbound-mobile #speedometer > div:first-child { font-size: 26px !important; }
-        body.outbound-mobile #speedometer > div:last-child { font-size: 11px; }
-        @media (prefers-reduced-motion: reduce) {
-            #boot-screen .boot-bar > span { animation: none; width: 100%; }
-        }
-
-        /* ---- OUTBOUND landing page ---- */
-        #ui, #mobile-controls, #weapon-wheel, #bigmap { visibility: hidden; }
-        body.outbound-playing #ui,
-        body.outbound-playing #mobile-controls,
-        body.outbound-playing #weapon-wheel,
-        body.outbound-playing #bigmap { visibility: visible; }
-        #landing {
-            position: fixed; inset: 0; z-index: 3000;
-            display: flex; align-items: center; justify-content: center;
-            background: radial-gradient(1200px 600px at 70% -10%, #1d2733 0%, #0b0d12 55%, #06070a 100%);
-            color: #f4f4f5;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            overflow: hidden;
-        }
-        #landing.hidden { display: none; }
-        #landing::after {
-            content: ''; position: absolute; inset: 0; pointer-events: none;
-            background: repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
-        }
-        #landing-inner { position: relative; text-align: center; padding: 24px; max-width: 560px; width: 100%; }
-        #landing-mark { font-size: clamp(42px, 9vw, 78px); font-weight: 700; letter-spacing: 0.42em; text-indent: 0.42em; margin-bottom: 6px; }
-        #landing-tag { font-size: 12px; letter-spacing: 0.34em; text-transform: uppercase; color: #8b93a1; margin-bottom: 44px; }
-        .ob-btn {
-            display: block; width: min(320px, 80vw); margin: 14px auto 0;
-            padding: 15px 28px; font: inherit; font-size: 15px; letter-spacing: 0.28em; text-indent: 0.28em;
-            text-transform: uppercase; cursor: pointer; border-radius: 4px;
-            transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-        }
-        .ob-btn:active { transform: scale(0.97); }
-        #btn-play { background: #f4f4f5; color: #0a0a0b; border: 1px solid #f4f4f5; }
-        #btn-play:hover { box-shadow: 0 0 26px rgba(244,244,245,0.35); }
-        #btn-settings { background: transparent; color: #f4f4f5; border: 1px solid rgba(244,244,245,0.35); }
-        #btn-settings:hover { border-color: #f4f4f5; }
-        #settings-panel {
-            position: fixed; inset: 0; z-index: 3100; display: none;
-            align-items: center; justify-content: center;
-            background: rgba(4,5,8,0.72); backdrop-filter: blur(6px);
-        }
-        #settings-panel.open { display: flex; }
-        #settings-card {
-            width: min(440px, 92vw); max-height: 88vh; overflow-y: auto;
-            background: #101216; border: 1px solid rgba(244,244,245,0.14);
-            border-radius: 10px; padding: 26px 28px 30px; text-align: left;
-            font-family: 'Segoe UI', system-ui, sans-serif; color: #f4f4f5;
-        }
-        #settings-card h3 { margin: 0 0 18px; font-size: 14px; letter-spacing: 0.3em; text-transform: uppercase; color: #8b93a1; font-weight: 600; }
-        .set-row { margin-bottom: 20px; }
-        .set-label { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #71717a; margin-bottom: 9px; }
-        .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .seg button {
-            font: inherit; font-size: 12px; padding: 9px 0; cursor: pointer;
-            background: #16191f; color: #a1a1aa; border: 1px solid #262a33; border-radius: 5px;
-        }
-        .seg button.sel { background: #f4f4f5; color: #0a0a0b; border-color: #f4f4f5; }
-        .seg-desc { font-size: 11px; color: #5c6470; margin-top: 7px; min-height: 14px; }
-        input[type=range] { width: 100%; accent-color: #f4f4f5; }
-        .switch-row { display: flex; align-items: center; justify-content: space-between; }
-        .switch { position: relative; width: 46px; height: 24px; display: inline-block; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider-sw {
-            position: absolute; inset: 0; background: #262a33; border-radius: 999px; cursor: pointer; transition: 0.15s;
-        }
-        .slider-sw::before {
-            content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
-            background: #f4f4f5; border-radius: 50%; transition: 0.15s;
-        }
-        .switch input:checked + .slider-sw { background: #3b82f6; }
-        .switch input:checked + .slider-sw::before { transform: translateX(22px); }
-        #sens-value { color: #d4d4d8; }
-        #btn-close-settings { width: 100%; margin-top: 6px; }
-        @media (max-width: 600px) {
-            #landing-mark { letter-spacing: 0.28em; text-indent: 0.28em; }
-        }
-    </style>
-</head>
-<body>
-    <!-- Portrait mode warning for mobile -->
-    <div id="portrait-warning">
-        <div class="rotate-icon">📱</div>
-        <div class="message">Please rotate your device</div>
-        <div class="submessage">This game is designed for landscape mode</div>
-    </div>
-
-    <div id="landing">
-        <div id="landing-inner">
-            <div id="landing-mark">OUTBOUND</div>
-            <div id="landing-tag">Open-world prototype · Drive · Fly · Survive</div>
-            <button id="btn-play" class="ob-btn">&#9654;&nbsp; Play</button>
-            <button id="btn-settings" class="ob-btn">Settings</button>
-        </div>
-    </div>
-    <div id="settings-panel">
-        <div id="settings-card">
-            <h3>Settings</h3>
-            <div class="set-row">
-                <div class="set-label">Graphics quality</div>
-                <div class="seg" id="gfx-seg">
-                    <button data-q="lowest">Lowest</button>
-                    <button data-q="low">Low</button>
-                    <button data-q="medium">Medium</button>
-                    <button data-q="high">High</button>
-                    <button data-q="ultra">Ultra</button>
-                </div>
-                <div class="seg-desc" id="gfx-desc"></div>
-            </div>
-            <div class="set-row switch-row">
-                <div>
-                    <div class="set-label" style="margin-bottom:2px">Shadows</div>
-                    <div class="seg-desc">Real-time sun shadows (costly on low-end devices)</div>
-                </div>
-                <label class="switch"><input type="checkbox" id="chk-shadows"><span class="slider-sw"></span></label>
-            </div>
-            <div class="set-row">
-                <div class="set-label">Look sensitivity — <span id="sens-value">1.0x</span></div>
-                <input type="range" id="rng-sens" min="0.25" max="3" step="0.05" value="1">
-            </div>
-            <button id="btn-close-settings" class="ob-btn">Done</button>
-        </div>
-    </div>
-
-    <div id="boot-screen">
-        <div class="boot-mark">OUTBOUND</div>
-        <div class="boot-bar"><span></span></div>
-        <div class="boot-sub">Building city</div>
-    </div>
-    <div id="ui">
-        <div id="mobile-hints">Joystick move · Drag right to look · Fire · F enter · Jump · Sprint</div>
-        <div id="title">OUTBOUND</div>
-        <div id="controls">
-            WASD - Move<br>
-            SHIFT - Sprint / Skip Time<br>
-            CTRL - Crouch<br>
-            SPACE - Jump<br>
-            F - Enter Vehicle<br>
-            TAB - Weapon Wheel · 1-8 Quick Select<br>
-            G - Fire · R - Reload<br>
-            Q - Map &amp; GPS<br>
-            Mouse - Look
-        </div>
-        <div id="state">STATE: IDLE</div>
-        <div id="time-display">TIME: 12:00</div>
-        <div id="speedometer" style="display: none;">
-            <div style="font-size: 36px; font-weight: bold; color: #0f0; text-shadow: 0 0 10px rgba(0,255,0,0.8);">
-                <span id="speed-value">0</span>
-            </div>
-            <div style="font-size: 14px; color: rgba(255,255,255,0.7);">KM/H</div>
-        </div>
-        <div id="crosshair"></div>
-        <div id="health-wrap">
-            <div id="health-label">HEALTH</div>
-            <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
-        </div>
-        <div id="money-display">$0</div>
-        <div id="ammo-display"><small id="weapon-name">PISTOL · LMB FIRE · R RELOAD · TAB WHEEL</small><span id="ammo-text">∞</span></div>
-        <div id="damage-flash"></div>
-        <div id="gps-toast"></div>
-        <div id="death-overlay">
-            <h2>WASTED</h2>
-            <div id="respawn-timer">Respawning in 5...</div>
-        </div>
-        <div id="hud-prompts">
-            <div id="click-prompt" class="hud-prompt">Click to play<small>ESC to release mouse</small></div>
-            <div id="vehicle-prompt" class="hud-prompt hidden">F - ENTER VEHICLE</div>
-            <div id="helicopter-prompt" class="hud-prompt hidden">F - ENTER HELICOPTER<small>W/S - Pitch | A/D - Roll | Q/E - Yaw<br>SPACE - Ascend | SHIFT - Descend</small></div>
-        </div>
-        <div id="minimap-wrap">
-            <canvas id="minimap" width="128" height="128"></canvas>
-            <div id="minimap-player"></div>
-        </div>
-    </div>
-
-    <!-- Weapon wheel overlay (TAB) -->
-    <div id="weapon-wheel">
-        <div id="weapon-wheel-title">WEAPON WHEEL — RELEASE TAB TO SELECT · 1-5 QUICK SELECT</div>
-    </div>
-
-    <div id="aim-reticle"></div>
-
-    <!-- Fullscreen map with GPS waypoint (Q) -->
-    <div id="bigmap">
-        <div id="bigmap-header">OUTBOUND — MAP</div>
-        <canvas id="bigmap-canvas" width="640" height="640"></canvas>
-        <div id="bigmap-hint">CLICK TO SET GPS WAYPOINT · Q / ESC TO CLOSE</div>
-    </div>
-
-    <!-- Mobile Controls -->
-    <div id="mobile-controls">
-        <div id="joystick-container">
-            <div id="joystick-base"></div>
-            <div id="joystick-thumb"></div>
-        </div>
-
-        <div id="btn-fire" class="mobile-button">FIRE</div>
-        <div id="btn-reload" class="mobile-button">R</div>
-        <div id="btn-enter-car" class="mobile-button">F</div>
-        <div id="btn-jump" class="mobile-button">⬆</div>
-        <div id="btn-run" class="mobile-button">🏃</div>
-
-        <div id="camera-touch-area"></div>
-    </div>
-
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-        }
-    }
-    </script>
-
-    <script type="module">
 import * as THREE from 'three';
 
 // ============================================================
@@ -1572,42 +669,28 @@ class InputManager {
 }
 
 // ============================================================
-// CHARACTER — PLAYABLE MALE PROTAGONIST "OUTBOUND"
-// Core Asset Spec: clean low-poly, hard-edged flat shading,
-// ~800-1200 triangles built from faceted primitives:
-//  - Head: 8-sided icosphere flattened at the chin, NO facial
-//    features (eyes/nose/mouth omitted entirely)
-//  - Hair: overlaid 8-to-10-sided extruded hemisphere, faceted
-//  - Neck: 6-sided cylinder; Chest & waist: 6-sided prisms
-//    tapering shoulders -> waist (inverted-triangle silhouette)
-//  - Limbs: 6-sided cylinders with angled elbow/knee ring loops
-//  - Hands: 5-sided wedge palm + 4-sided wedge thumb block
-//  - Feet: low-profile 6-sided angular wedges tapering to toes
-// Color atlas (flat faces, zero textures):
-//  hair/shoes #1A1A1A | skin #D2A679 | shirt #FF6600 | pants #E6E6E6
-// Rig names/offsets are preserved so CharacterAnimator is untouched.
+// CHARACTER (Detailed Low-Poly Humanoid)
 // ============================================================
-const OUTBOUND_PALETTE = {
-    HAIR_SHOES: 0x1A1A1A,   // solid matte dark charcoal
-    SKIN:       0xD2A679,   // flat light warm tan
-    SHIRT:      0xFF6600,   // vibrant matte orange
-    PANTS:      0xE6E6E6,   // light cool grey / off-white
-};
-
 class Character {
     constructor() {
         this.root = new THREE.Group();
         this.root.name = 'CharacterRoot';
 
-        const mat = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
         this.materials = {
-            skin:     mat(OUTBOUND_PALETTE.SKIN),
-            shirt:    mat(OUTBOUND_PALETTE.SHIRT),
-            jacket:   mat(OUTBOUND_PALETTE.SHIRT),   // hero wears the orange shirt (no jacket layer)
-            trousers: mat(OUTBOUND_PALETTE.PANTS),
-            shoes:    mat(OUTBOUND_PALETTE.HAIR_SHOES),
-            hair:     mat(OUTBOUND_PALETTE.HAIR_SHOES),
-            belt:     mat(0x2A2A2A),
+            skin: new THREE.MeshLambertMaterial({ color: 0xe8b896 }),
+            shirt: new THREE.MeshLambertMaterial({ color: 0xf2e6c9 }),   // cream shirt
+            jacket: new THREE.MeshLambertMaterial({ color: 0x1f2a44 }),  // navy blue jacket
+            trousers: new THREE.MeshLambertMaterial({ color: 0x2b3a5c }), // navy blue trousers
+            shoes: new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
+            hair: new THREE.MeshLambertMaterial({ color: 0x3a2a1a }),
+            belt: new THREE.MeshLambertMaterial({ color: 0x5a3a1a }),
+            eye: new THREE.MeshBasicMaterial({ color: 0x2a4a6a }),
+            eyeWhite: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+            pupil: new THREE.MeshBasicMaterial({ color: 0x111111 }),
+            lip: new THREE.MeshLambertMaterial({ color: 0xc89080 }),
+            nose: new THREE.MeshLambertMaterial({ color: 0xd4a574 }),
+            eyebrow: new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
+            collar: new THREE.MeshLambertMaterial({ color: 0xf2e6c9 }), // cream collar
         };
 
         this.buildSkeleton();
@@ -1726,91 +809,174 @@ class Character {
     }
 
     buildMeshes() {
-        // ---- Faceted low-poly construction helpers -----------------------
-        const M = this.materials;
-        const addMesh = (geo, mat, parent, x, y, z, rx, ry, rz) => {
-            const m = new THREE.Mesh(geo, mat);
-            m.position.set(x, y, z);
-            if (rx || ry || rz) m.rotation.set(rx || 0, ry || 0, rz || 0);
-            parent.add(m);
-            return m;
-        };
-        // Wedge prism: n-sided cylinder scaled into a flat wedge.
-        const wedgeGeo = (w, h, dTop, dBot, sides) => {
-            const g = new THREE.CylinderGeometry(dTop, dBot, h, sides);
-            g.scale(w / Math.max(dTop, dBot, 0.001), 1, 1);
-            return g;
-        };
+        const headGeo = new THREE.BoxGeometry(0.24, 0.28, 0.26);
+        const headMesh = new THREE.Mesh(headGeo, this.materials.skin);
+        headMesh.position.y = 0.14;
+        this.head.add(headMesh);
 
-        // ---- HEAD: 8-sided icosphere flattened at the chin ---------------
-        // Faceless per spec: eyes, nose, brows and mouth are omitted entirely.
-        const skull = addMesh(new THREE.IcosahedronGeometry(0.145, 1), M.skin, this.head, 0, 0.155, 0);
-        skull.scale.set(0.98, 1.02, 0.92);                        // slightly deep cranium
-        const chin = addMesh(new THREE.IcosahedronGeometry(0.09, 1), M.skin, this.head, 0, 0.045, 0.015);
-        chin.scale.set(0.95, 0.62, 0.88);                         // truncated jaw facet, chin flattening
-        const jawSide = new THREE.BoxGeometry(0.035, 0.09, 0.13);
-        addMesh(jawSide, M.skin, this.head, 0.095, 0.075, 0.01);  // cheek facet L
-        addMesh(jawSide, M.skin, this.head, -0.095, 0.075, 0.01); // cheek facet R
-        const earGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.018, 5);
-        addMesh(earGeo, M.skin, this.head, 0.132, 0.15, 0.005, 0, 0, Math.PI / 2);   // ear L (5-sided)
-        addMesh(earGeo, M.skin, this.head, -0.132, 0.15, 0.005, 0, 0, Math.PI / 2);  // ear R
+        const eyeWhiteGeo = new THREE.SphereGeometry(0.03, 8, 6);
+        const eyeGeo = new THREE.SphereGeometry(0.02, 8, 6);
+        const pupilGeo = new THREE.SphereGeometry(0.012, 6, 4);
 
-        // ---- HAIR: overlaid 8-to-10-sided extruded hemisphere cap --------
-        const hairCapGeo = new THREE.SphereGeometry(0.158, 9, 4, 0, Math.PI * 2, 0, Math.PI * 0.52);
-        const hairCap = addMesh(hairCapGeo, M.hair, this.head, 0, 0.155, -0.004);
-        hairCap.scale.set(0.98, 1.12, 0.96);                      // faceted dome, hard edges
-        addMesh(new THREE.BoxGeometry(0.2, 0.1, 0.055), M.hair, this.head, 0, 0.13, -0.115); // nape block
-        const sideHair = new THREE.BoxGeometry(0.03, 0.09, 0.1);
-        addMesh(sideHair, M.hair, this.head, 0.128, 0.16, -0.03);     // sideburn L
-        addMesh(sideHair, M.hair, this.head, -0.128, 0.16, -0.03);    // sideburn R
+        const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, this.materials.eyeWhite);
+        leftEyeWhite.position.set(0.06, 0.16, 0.13);
+        this.head.add(leftEyeWhite);
+        const leftEye = new THREE.Mesh(eyeGeo, this.materials.eye);
+        leftEye.position.set(0.06, 0.16, 0.14);
+        this.head.add(leftEye);
+        const leftPupil = new THREE.Mesh(pupilGeo, this.materials.pupil);
+        leftPupil.position.set(0.06, 0.16, 0.15);
+        this.head.add(leftPupil);
 
-        // ---- NECK: 6-sided cylinder --------------------------------------
-        addMesh(new THREE.CylinderGeometry(0.055, 0.065, 0.1, 6), M.skin, this.neck, 0, 0.0, 0);
+        const rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, this.materials.eyeWhite);
+        rightEyeWhite.position.set(-0.06, 0.16, 0.13);
+        this.head.add(rightEyeWhite);
+        const rightEye = new THREE.Mesh(eyeGeo, this.materials.eye);
+        rightEye.position.set(-0.06, 0.16, 0.14);
+        this.head.add(rightEye);
+        const rightPupil = new THREE.Mesh(pupilGeo, this.materials.pupil);
+        rightPupil.position.set(-0.06, 0.16, 0.15);
+        this.head.add(rightPupil);
 
-        // ---- TORSO: 6-sided prisms, tapered shoulders -> waist ------------
-        // Inverted-triangle silhouette: broad faceted chest narrowing to waist.
-        addMesh(new THREE.CylinderGeometry(0.26, 0.2, 0.34, 6), M.shirt, this.chest, 0, 0.1, 0);          // chest prism
-        const deltoid = new THREE.IcosahedronGeometry(0.085, 0);
-        addMesh(deltoid, M.shirt, this.leftArm, 0.01, 0.02, 0);       // shoulder cap L (20-face)
-        addMesh(deltoid, M.shirt, this.rightArm, -0.01, 0.02, 0);     // shoulder cap R
-        addMesh(new THREE.CylinderGeometry(0.2, 0.17, 0.16, 6), M.shirt, this.torso, 0, 0.05, 0);         // waist prism
-        addMesh(new THREE.CylinderGeometry(0.185, 0.16, 0.18, 6), M.trousers, this.pelvis, 0, -0.03, 0);  // hip prism
-        addMesh(new THREE.CylinderGeometry(0.19, 0.19, 0.045, 8), M.belt, this.pelvis, 0, 0.075, 0);      // belt ring
-        addMesh(new THREE.BoxGeometry(0.05, 0.045, 0.02), M.shoes, this.pelvis, 0, 0.075, -0.185);        // buckle
+        const eyebrowGeo = new THREE.BoxGeometry(0.05, 0.01, 0.02);
+        const leftEyebrow = new THREE.Mesh(eyebrowGeo, this.materials.eyebrow);
+        leftEyebrow.position.set(0.06, 0.2, 0.13);
+        leftEyebrow.rotation.z = 0.1;
+        this.head.add(leftEyebrow);
+        const rightEyebrow = new THREE.Mesh(eyebrowGeo, this.materials.eyebrow);
+        rightEyebrow.position.set(-0.06, 0.2, 0.13);
+        rightEyebrow.rotation.z = -0.1;
+        this.head.add(rightEyebrow);
 
-        // ---- ARMS: 6-sided cylinders connected at an angled elbow joint ---
-        addMesh(new THREE.CylinderGeometry(0.062, 0.052, 0.3, 6), M.shirt, this.leftUpperArm, 0, -0.15, 0);
-        addMesh(new THREE.CylinderGeometry(0.05, 0.042, 0.26, 6), M.skin, this.leftForearm, 0, -0.13, 0);
-        addMesh(new THREE.TorusGeometry(0.05, 0.012, 4, 6), M.skin, this.leftForearm, 0, -0.005, 0, Math.PI / 2); // elbow ring loop
-        addMesh(new THREE.CylinderGeometry(0.062, 0.052, 0.3, 6), M.shirt, this.rightUpperArm, 0, -0.15, 0);
-        addMesh(new THREE.CylinderGeometry(0.05, 0.042, 0.26, 6), M.skin, this.rightForearm, 0, -0.13, 0);
-        addMesh(new THREE.TorusGeometry(0.05, 0.012, 4, 6), M.skin, this.rightForearm, 0, -0.005, 0, Math.PI / 2);
+        const noseGeo = new THREE.BoxGeometry(0.03, 0.04, 0.03);
+        const nose = new THREE.Mesh(noseGeo, this.materials.nose);
+        nose.position.set(0, 0.12, 0.14);
+        this.head.add(nose);
 
-        // ---- HANDS: 5-sided wedge palm + single 4-sided wedge thumb -------
-        for (const hand of [this.leftHand, this.rightHand]) {
-            const sgn = hand === this.leftHand ? 1 : -1;
-            const palm = wedgeGeo(0.07, 0.1, 0.03, 0.055, 5);
-            palm.rotateX(Math.PI / 2);                            // taper toward the fingertips
-            addMesh(palm, M.skin, hand, 0, -0.05, 0);
-            const thumb = wedgeGeo(0.022, 0.05, 0.012, 0.02, 4);
-            addMesh(thumb, M.skin, hand, sgn * 0.038, -0.045, -0.03, 0.5, 0, sgn * -0.5);
-        }
+        const mouthGeo = new THREE.BoxGeometry(0.06, 0.015, 0.02);
+        const mouth = new THREE.Mesh(mouthGeo, this.materials.lip);
+        mouth.position.set(0, 0.08, 0.13);
+        this.head.add(mouth);
 
-        // ---- LEGS: 6-sided cylinders with knee ring loops for bending -----
-        addMesh(new THREE.CylinderGeometry(0.085, 0.07, 0.42, 6), M.trousers, this.leftThigh, 0, -0.21, 0);
-        addMesh(new THREE.CylinderGeometry(0.068, 0.055, 0.4, 6), M.trousers, this.leftLowerLeg, 0, -0.2, 0);
-        addMesh(new THREE.TorusGeometry(0.068, 0.014, 4, 6), M.trousers, this.leftLowerLeg, 0, -0.005, 0, Math.PI / 2);
-        addMesh(new THREE.CylinderGeometry(0.085, 0.07, 0.42, 6), M.trousers, this.rightThigh, 0, -0.21, 0);
-        addMesh(new THREE.CylinderGeometry(0.068, 0.055, 0.4, 6), M.trousers, this.rightLowerLeg, 0, -0.2, 0);
-        addMesh(new THREE.TorusGeometry(0.068, 0.014, 4, 6), M.trousers, this.rightLowerLeg, 0, -0.005, 0, Math.PI / 2);
+        const hairTopGeo = new THREE.BoxGeometry(0.26, 0.12, 0.28);
+        const hairTop = new THREE.Mesh(hairTopGeo, this.materials.hair);
+        hairTop.position.set(0, 0.26, -0.01);
+        this.head.add(hairTop);
 
-        // ---- FEET: low-profile 6-sided angular wedges tapering to toes ----
-        for (const foot of [this.leftFoot, this.rightFoot]) {
-            const shoe = wedgeGeo(0.11, 0.08, 0.06, 0.1, 6);
-            shoe.rotateX(-Math.PI / 2);                           // tip points forward (-Z is forward in this rig)
-            addMesh(shoe, M.shoes, foot, 0, -0.045, 0.05);
-            addMesh(new THREE.BoxGeometry(0.105, 0.03, 0.06), M.shoes, foot, 0, -0.02, -0.05); // heel block
-        }
+        const hairSideGeo = new THREE.BoxGeometry(0.04, 0.15, 0.22);
+        const hairLeft = new THREE.Mesh(hairSideGeo, this.materials.hair);
+        hairLeft.position.set(0.13, 0.18, -0.02);
+        this.head.add(hairLeft);
+        const hairRight = new THREE.Mesh(hairSideGeo, this.materials.hair);
+        hairRight.position.set(-0.13, 0.18, -0.02);
+        this.head.add(hairRight);
+
+        const hairBackGeo = new THREE.BoxGeometry(0.22, 0.18, 0.04);
+        const hairBack = new THREE.Mesh(hairBackGeo, this.materials.hair);
+        hairBack.position.set(0, 0.18, -0.13);
+        this.head.add(hairBack);
+
+        const neckGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.1, 6);
+        const neckMesh = new THREE.Mesh(neckGeo, this.materials.skin);
+        neckMesh.position.y = 0.0;
+        this.neck.add(neckMesh);
+
+        const collarGeo = new THREE.CylinderGeometry(0.09, 0.1, 0.04, 8);
+        const collar = new THREE.Mesh(collarGeo, this.materials.collar);
+        collar.position.y = 0.02;
+        this.neck.add(collar);
+
+        const chestGeo = new THREE.BoxGeometry(0.46, 0.32, 0.26);
+        const chestMesh = new THREE.Mesh(chestGeo, this.materials.shirt);
+        chestMesh.position.y = 0.1;
+        this.chest.add(chestMesh);
+
+        const jacketFrontGeo = new THREE.BoxGeometry(0.48, 0.3, 0.02);
+        const jacketFront = new THREE.Mesh(jacketFrontGeo, this.materials.jacket);
+        jacketFront.position.set(0, 0.1, 0.13);
+        this.chest.add(jacketFront);
+
+        const jacketBackGeo = new THREE.BoxGeometry(0.48, 0.3, 0.02);
+        const jacketBack = new THREE.Mesh(jacketBackGeo, this.materials.jacket);
+        jacketBack.position.set(0, 0.1, -0.13);
+        this.chest.add(jacketBack);
+
+        const pelvisGeo = new THREE.BoxGeometry(0.38, 0.22, 0.24);
+        const pelvisMesh = new THREE.Mesh(pelvisGeo, this.materials.trousers);
+        pelvisMesh.position.y = -0.05;
+        this.pelvis.add(pelvisMesh);
+
+        const beltGeo = new THREE.BoxGeometry(0.4, 0.05, 0.26);
+        const beltMesh = new THREE.Mesh(beltGeo, this.materials.belt);
+        beltMesh.position.y = 0.02;
+        this.pelvis.add(beltMesh);
+
+        const buckleGeo = new THREE.BoxGeometry(0.04, 0.04, 0.02);
+        const buckleMat = new THREE.MeshLambertMaterial({ color: 0xaaaaaa });
+        const buckle = new THREE.Mesh(buckleGeo, buckleMat);
+        buckle.position.set(0, 0.02, 0.13);
+        this.pelvis.add(buckle);
+
+        const abdomenGeo = new THREE.BoxGeometry(0.4, 0.16, 0.24);
+        const abdomenMesh = new THREE.Mesh(abdomenGeo, this.materials.shirt);
+        abdomenMesh.position.y = 0.05;
+        this.torso.add(abdomenMesh);
+
+        const shoulderGeo = new THREE.SphereGeometry(0.09, 8, 6);
+        const leftShoulder = new THREE.Mesh(shoulderGeo, this.materials.jacket);
+        leftShoulder.position.set(0.0, 0.0, 0);
+        this.leftUpperArm.add(leftShoulder);
+        const rightShoulder = new THREE.Mesh(shoulderGeo, this.materials.jacket);
+        rightShoulder.position.set(0.0, 0.0, 0);
+        this.rightUpperArm.add(rightShoulder);
+
+        const upperArmGeo = new THREE.BoxGeometry(0.11, 0.3, 0.11);
+        const leftUpperArmMesh = new THREE.Mesh(upperArmGeo, this.materials.jacket);
+        leftUpperArmMesh.position.y = -0.15;
+        this.leftUpperArm.add(leftUpperArmMesh);
+        const rightUpperArmMesh = new THREE.Mesh(upperArmGeo, this.materials.jacket);
+        rightUpperArmMesh.position.y = -0.15;
+        this.rightUpperArm.add(rightUpperArmMesh);
+
+        const forearmGeo = new THREE.BoxGeometry(0.1, 0.27, 0.1);
+        const leftForearmMesh = new THREE.Mesh(forearmGeo, this.materials.skin);
+        leftForearmMesh.position.y = -0.13;
+        this.leftForearm.add(leftForearmMesh);
+        const rightForearmMesh = new THREE.Mesh(forearmGeo, this.materials.skin);
+        rightForearmMesh.position.y = -0.13;
+        this.rightForearm.add(rightForearmMesh);
+
+        const handGeo = new THREE.BoxGeometry(0.08, 0.1, 0.06);
+        const leftHandMesh = new THREE.Mesh(handGeo, this.materials.skin);
+        leftHandMesh.position.y = -0.05;
+        this.leftHand.add(leftHandMesh);
+        const rightHandMesh = new THREE.Mesh(handGeo, this.materials.skin);
+        rightHandMesh.position.y = -0.05;
+        this.rightHand.add(rightHandMesh);
+
+        const thighGeo = new THREE.BoxGeometry(0.15, 0.42, 0.15);
+        const leftThighMesh = new THREE.Mesh(thighGeo, this.materials.trousers);
+        leftThighMesh.position.y = -0.21;
+        this.leftThigh.add(leftThighMesh);
+        const rightThighMesh = new THREE.Mesh(thighGeo, this.materials.trousers);
+        rightThighMesh.position.y = -0.21;
+        this.rightThigh.add(rightThighMesh);
+
+        const lowerLegGeo = new THREE.BoxGeometry(0.13, 0.4, 0.13);
+        const leftLowerLegMesh = new THREE.Mesh(lowerLegGeo, this.materials.trousers);
+        leftLowerLegMesh.position.y = -0.2;
+        this.leftLowerLeg.add(leftLowerLegMesh);
+        const rightLowerLegMesh = new THREE.Mesh(lowerLegGeo, this.materials.trousers);
+        rightLowerLegMesh.position.y = -0.2;
+        this.rightLowerLeg.add(rightLowerLegMesh);
+
+        const footGeo = new THREE.BoxGeometry(0.13, 0.09, 0.22);
+        const leftFootMesh = new THREE.Mesh(footGeo, this.materials.shoes);
+        leftFootMesh.position.set(0, -0.045, 0.05);
+        this.leftFoot.add(leftFootMesh);
+        const rightFootMesh = new THREE.Mesh(footGeo, this.materials.shoes);
+        rightFootMesh.position.set(0, -0.045, 0.05);
+        this.rightFoot.add(rightFootMesh);
 
         this.root.traverse((child) => {
             if (child.isMesh) {
@@ -2263,11 +1429,6 @@ const CarGeoCache = {
         const k = `m${color}`;
         if (!this._cache.has(k)) this._cache.set(k, new THREE.MeshLambertMaterial({ color, flatShading: true }));
         return this._cache.get(k);
-    },
-    sph(r) {
-        const k = `s${r}`;
-        if (!this._cache.has(k)) this._cache.set(k, new THREE.SphereGeometry(r, 8, 6));
-        return this._cache.get(k);
     }
 };
 
@@ -2622,45 +1783,32 @@ function npcRng(seed) {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 }
-// ---- 15 DISTINCT NPC VARIETIES — 7 MALE + 8 FEMALE (each tells a story) --
-// The two BASE FIGURES from the asset spec drive every character:
-//   base:'m' -> male low-poly figure (faceless faceted head, inverted-triangle
-//               torso; spec palette hair/shoes #1A1A1A, skin #D2A679,
-//               shirt #FF6600, pants #E6E6E6 for the protagonist-style look)
-//   base:'f' -> female low-poly figure (sculpted jaw/cheek facets, drawn
-//               almond eyes + nose ridge + mouth line, asymmetrical bob of
-//               large polygon blocks, sports-bra cone bust, narrow cylinder
-//               waist, tapered legs; rust/auburn #B16A46 hair).
-// New varieties are designed by adjusting HEIGHT, WEIGHT/BUILD, BODY SHAPE,
-// clothes and colors on top of those bases. h = height scale, build = width/
-// weight scale, hours = shift window in game clock, hat/prop = silhouette ids.
-const NPC_VARIETIES = [
-    // ===== 7 MALE varieties =====
-    { id:'office',     role:'Office worker',      names:['Daniel Reed','Maria Kovacs'],  base:'m', gender:'m', h:1.02, build:0.94, hours:[8,17],   shirt:0x64B5F6, pants:0x263238, suit:true,  hat:null,     hairCol:0x1A1A1A, skin:0xD2A679, prop:'briefcase' },
-    { id:'jogger',     role:'Morning jogger',     names:['Tomas Lukac','Greta Bauer'],   base:'m', gender:'m', h:1.00, build:0.88, hours:[5,7],    shirt:0xFF8A65, pants:0x212121, headband:true, hat:null,    hairCol:0x1A1A1A, skin:0xE0AC69, prop:null },
-    { id:'gardener',   role:'Parks gardener',     names:['Mateo Ruiz','Hinko Babic'],    base:'m', gender:'m', h:0.99, build:1.05, hours:[6,14],   shirt:0x81C784, pants:0x5D4037, hat:'straw',  hairCol:0x4E342E, skin:0x8D5524, prop:'rake' },
-    { id:'postman',    role:'Mail carrier',       names:['Arthur Pen','Ivo Stanek'],     base:'m', gender:'m', h:1.02, build:0.98, hours:[8,16],   shirt:0xFFD54F, pants:0x0D47A1, bag:true,   hat:'cap',    hairCol:0x6D4C41, skin:0xF1C27D, prop:'parcel' },
-    { id:'chef',       role:'Restaurant chef',    names:['Marco Rossi','Pierre Leblanc'],base:'m', gender:'m', h:1.00, build:1.18, hours:[11,23],  shirt:0xFAFAFA, pants:0x212121, apron:true, hat:'chef',   hairCol:0x1A1A1A, skin:0xE0AC69, prop:'pan' },
-    { id:'mechanic',   role:'Garage mechanic',    names:['Dexter Vale','Milos Rataj'],   base:'m', gender:'m', h:1.00, build:1.12, hours:[7,15],   shirt:0x42A5F5, pants:0x263238, belt:true,  hat:'cap',    hairCol:0x3E2723, skin:0xA1662F, prop:'wrench' },
-    { id:'musician',   role:'Street musician',    names:['Florian Bach','DJ Kosey'],     base:'m', gender:'m', h:1.01, build:0.92, hours:[16,23],  shirt:0x7E57C2, pants:0x1A237E, hat:'brim',   hairCol:0x212121, skin:0x8D5524, prop:'guitar' },
-    // ===== 8 FEMALE varieties =====
-    { id:'nurse',      role:'Night nurse',        names:['Elena Voss','Priya Nair'],     base:'f', gender:'f', h:0.96, build:0.90, hours:[21,7],   shirt:0x4DB6AC, pants:0xFFFFFF, bra:true,   hat:null,     hairCol:0xB16A46, skin:0xF4D0C5, prop:'clipboard' },
-    { id:'student',    role:'University student', names:['Lena Fischer','Arik Sol'],     base:'f', gender:'f', h:0.93, build:0.86, hours:[9,15],   shirt:0xBA68C8, pants:0x1A237E, backpack:true, hat:'beanie', hairCol:0xFFB300, skin:0xFFDBAC, prop:'book' },
-    { id:'businesswoman',role:'Banker',           names:['Sofia Marchetti','Ingrid Holm'],base:'f',gender:'f', h:1.01, build:0.90, hours:[7,18],   shirt:0xF5F5F5, pants:0x212121, suit:true,  skirt:true, hat:null,     hairCol:0x3E2723, skin:0xE8B98C, prop:'briefcase' },
-    { id:'clerk',      role:'Shop clerk',         names:['Nina Park','Rosa Delgado'],    base:'f', gender:'f', h:0.95, build:0.92, hours:[10,19],  shirt:0xF06292, pants:0x37474F, skirt:true, hat:null,     hairCol:0x1A1A1A, skin:0xFFDBAC, prop:'bag' },
-    { id:'mother',     role:'Mother on errands',  names:['Anna Berg','Lucia Costa'],     base:'f', gender:'f', h:0.94, build:1.02, hours:[9,17],   shirt:0xAED581, pants:0x6D4C41, skirt:true, bag:true,   hat:null,     hairCol:0x8D6E63, skin:0xF1C27D, prop:'tote' },
-    { id:'elderly',    role:'Retired pensioner',  names:['Grandpa Elias','Mrs. Grundig'],base:'f', gender:'f', h:0.90, build:1.00, hours:[8,12],   shirt:0xBCAAA4, pants:0x455A64, cane:true,  hat:null,     hairCol:0xCFD8DC, skin:0xE8B98C, prop:null },
-    { id:'vendor',     role:'Market vendor',      names:['Yusuf Ali','Katerina Novak'],  base:'f', gender:'f', h:0.99, build:1.08, hours:[7,15],   shirt:0xFFB74D, pants:0x33691E, apron:true, hat:'straw',  hairCol:0x1A1A1A, skin:0xC68642, prop:'crate' },
-    { id:'runner',     role:'Track athlete',      names:['Iris Novak','Dana Cole'],      base:'f', gender:'f', h:1.04, build:0.86, hours:[6,9],    shirt:0x26C6DA, pants:0x1A1A1A, bra:true,   headband:true, hat:null,    hairCol:0xB16A46, skin:0xF4D0C5, prop:null },
-];
 
-// ---- Female base-figure color atlas (asset spec) --------------------------
-const FEMALE_PALETTE = {
-    HAIR:  0xB16A46,   // matte rust / auburn
-    BRA:   0xFFFFFF,   // matte white sports bra
-    PANTS: 0x1A1A1A,   // dark charcoal bottoms / waistband
-    SKIN:  0xF4D0C5,   // flat light peach
-};
+// ---- 20 DISTINCT NPC VARIETIES (each tells a story) ---------------------
+// h = height scale, build = body width/weight scale, gender, skin/hair,
+// hours = shift window in game clock, hat/prop = silhouette identifiers.
+const NPC_VARIETIES = [
+    { id:'baker',      role:'Baker',              names:['Otto Krume','Hana Weiss'],     h:1.00, build:1.14, gender:'m', hours:[4,12],   shirt:0xF2EDE2, pants:0x4E342E, apron:true, hat:'chef',   hairCol:0x3E2723, skin:0xE8B98C, prop:null },
+    { id:'butcher',    role:'Butcher',            names:['Viktor Marek','Stana Petrova'],h:0.98, build:1.26, gender:'m', hours:[6,16],   shirt:0xECEFF1, pants:0xB71C1C, apron:true, hat:null,     hairCol:0x4E342E, skin:0xD9A66B, prop:'cleaver' },
+    { id:'office',     role:'Office worker',      names:['Daniel Reed','Maria Kovacs'],  h:1.02, build:0.94, gender:'m', hours:[8,17],   shirt:0x64B5F6, pants:0x263238, suit:true,  hat:null,     hairCol:0x2b1d0e, skin:0xF1C27D, prop:'briefcase' },
+    { id:'nurse',      role:'Night nurse',        names:['Elena Voss','Priya Nair'],     h:0.96, build:0.90, gender:'f', hours:[21,7],   shirt:0x4DB6AC, pants:0xFFFFFF, skirt:true, hat:null,     hairCol:0x5D4037, skin:0xC68642, prop:'clipboard' },
+    { id:'jogger',     role:'Morning jogger',     names:['Tomas Lukac','Greta Bauer'],   h:1.00, build:0.88, gender:'m', hours:[5,7],    shirt:0xFF8A65, pants:0x212121, headband:true, hat:null, hairCol:0x212121, skin:0xE0AC69, prop:null },
+    { id:'fisherman',  role:'Harbor fisherman',   names:['Old Barnaby','Kees van Daal'], h:0.97, build:1.08, gender:'m', hours:[3,11],   shirt:0x37474F, pants:0x455A64, hat:'cap', hatCol:0xBF360C, hairCol:0x9E9E9E, skin:0xA1662F, prop:'rod' },
+    { id:'student',    role:'University student', names:['Lena Fischer','Arik Sol'],     h:0.93, build:0.86, gender:'f', hours:[9,15],   shirt:0xBA68C8, pants:0x1A237E, backpack:true, hat:'beanie', hairCol:0xFFB300, skin:0xFFDBAC, prop:'book' },
+    { id:'businesswoman',role:'Banker',           names:['Sofia Marchetti','Ingrid Holm'],h:1.01,build:0.90, gender:'f', hours:[7,18],   shirt:0xF5F5F5, pants:0x212121, suit:true,  skirt:true, hat:null,     hairCol:0x3E2723, skin:0xE8B98C, prop:'briefcase' },
+    { id:'gardener',   role:'Parks gardener',     names:['Mateo Ruiz','Hinko Babic'],    h:0.99, build:1.05, gender:'m', hours:[6,14],   shirt:0x81C784, pants:0x5D4037, hat:'straw',  hairCol:0x4E342E, skin:0x8D5524, prop:'rake' },
+    { id:'postman',    role:'Mail carrier',       names:['Arthur Pen','Ivo Stanek'],     h:1.02, build:0.98, gender:'m', hours:[8,16],   shirt:0xFFD54F, pants:0x0D47A1, bag:true,   hat:'cap',    hairCol:0x6D4C41, skin:0xF1C27D, prop:'parcel' },
+    { id:'cop',        role:'Beat cop on patrol', names:['Officer Dane','Officer Kova'], h:1.04, build:1.06, gender:'m', hours:[6,22],   shirt:0x1A3A6B, pants:0x142C50, belt:true,  hat:'brim',   hairCol:0x212121, skin:0xC68642, prop:'radio' },
+    { id:'clerk',      role:'Shop clerk',         names:['Nina Park','Rosa Delgado'],    h:0.95, build:0.92, gender:'f', hours:[10,19],  shirt:0xF06292, pants:0x37474F, skirt:true, hat:null,     hairCol:0x212121, skin:0xFFDBAC, prop:'bag' },
+    { id:'drunk',      role:'Bar regular',        names:['Salty Jim','Branko T.'],       h:0.97, build:1.20, gender:'m', hours:[17,24],  shirt:0x8D6E63, pants:0x3E2723, hat:null,     hairCol:0x757575, skin:0xB0793B, prop:'bottle', wobble:true },
+    { id:'chef',       role:'Restaurant chef',    names:['Marco Rossi','Pierre Leblanc'],h:1.00, build:1.18, gender:'m', hours:[11,23],  shirt:0xFAFAFA, pants:0x212121, apron:true, hat:'chef',   hairCol:0x212121, skin:0xE0AC69, prop:'pan' },
+    { id:'mother',     role:'Mother on errands',  names:['Anna Berg','Lucia Costa'],     h:0.94, build:1.02, gender:'f', hours:[9,17],   shirt:0xAED581, pants:0x6D4C41, skirt:true, bag:true,   hat:null,     hairCol:0x8D6E63, skin:0xF1C27D, prop:'tote' },
+    { id:'mechanic',   role:'Garage mechanic',    names:['Dexter Vale','Milos Rataj'],   h:1.00, build:1.12, gender:'m', hours:[7,15],   shirt:0x42A5F5, pants:0x263238, belt:true,  hat:'cap',    hairCol:0x3E2723, skin:0xA1662F, prop:'wrench' },
+    { id:'elderly',    role:'Retired pensioner',  names:['Grandpa Elias','Mrs. Grundig'],h:0.90, build:1.00, gender:'f', hours:[8,12],   shirt:0xBCAAA4, pants:0x455A64, cane:true,  hat:null,     hairCol:0xCFD8DC, skin:0xE8B98C, prop:null },
+    { id:'firefighter',role:'On-duty firefighter',names:['Cade Ember','Rok Hladnik'],    h:1.06, build:1.16, gender:'m', hours:[7,19],   shirt:0xC62828, pants:0x212121, belt:true,  hat:'brim',   hairCol:0x4E342E, skin:0xD9A66B, prop:'axe' },
+    { id:'vendor',     role:'Market vendor',      names:['Yusuf Ali','Katerina Novak'],  h:0.99, build:1.08, gender:'f', hours:[7,15],   shirt:0xFFB74D, pants:0x33691E, apron:true, hat:'straw',  hairCol:0x212121, skin:0xC68642, prop:'crate' },
+    { id:'musician',   role:'Street musician',    names:['Florian Bach','DJ Kosey'],     h:1.01, build:0.92, gender:'m', hours:[16,23],  shirt:0x7E57C2, pants:0x1A237E, hat:'brim',   hairCol:0x212121, skin:0x8D5524, prop:'guitar' },
+];
 
 // ---- Hand-placed residential streets (front-door points along sidewalks) --
 // Matches the suburban cottages of placeSuburbanHouses() and the avenues
@@ -2768,29 +1916,13 @@ class Pedestrian {
     _buildBody(rng) {
         const G = this.group;
         const b = this.buildScale;
-        const cyl = (rt, rb, h, seg) => CarGeoCache.cyl(Math.round(rt * 1e4) / 1e4, Math.round(rb * 1e4) / 1e4, Math.round(h * 1e4) / 1e4, seg);
-        const box = (w, h2, d) => CarGeoCache.box(Math.round(w * 1e4) / 1e4, Math.round(h2 * 1e4) / 1e4, Math.round(d * 1e4) / 1e4);
-        const sph = (r) => CarGeoCache.sph(Math.round(r * 1e4) / 1e4);
-        const oct = (r) => {
-            const rr = Math.round(r * 1e4) / 1e4, k = `o${rr}`;
-            if (!CarGeoCache._cache.has(k)) CarGeoCache._cache.set(k, new THREE.OctahedronGeometry(rr));
-            return CarGeoCache._cache.get(k);
-        };
-        const cone = (r, h, seg) => {
-            const k = `n${Math.round(r * 1e4) / 1e4}_${Math.round(h * 1e4) / 1e4}_${seg}`;
-            if (!CarGeoCache._cache.has(k)) CarGeoCache._cache.set(k, new THREE.ConeGeometry(Math.round(r * 1e4) / 1e4, Math.round(h * 1e4) / 1e4, seg));
-            return CarGeoCache._cache.get(k);
-        };
-        const tor = (r, t) => {
-            const k = `t${Math.round(r * 1e4) / 1e4}_${Math.round(t * 1e4) / 1e4}`;
-            if (!CarGeoCache._cache.has(k)) CarGeoCache._cache.set(k, new THREE.TorusGeometry(Math.round(r * 1e4) / 1e4, Math.round(t * 1e4) / 1e4, 5, 8));
-            return CarGeoCache._cache.get(k);
-        };
-        const tet = (r) => {
-            const rr = Math.round(r * 1e4) / 1e4, k = `e${rr}`;
-            if (!CarGeoCache._cache.has(k)) CarGeoCache._cache.set(k, new THREE.TetrahedronGeometry(rr));
-            return CarGeoCache._cache.get(k);
-        };
+        const cyl = (rt, rb, h, seg) => CarGeoCache.cyl(rt, rb, h, seg);
+        const box = (w, h2, d) => CarGeoCache.box(w, h2, d);
+        const sph = (r) => new THREE.SphereGeometry(r, 8, 6);
+        const oct = (r) => new THREE.OctahedronGeometry(r);
+        const cone = (r, h, seg) => new THREE.ConeGeometry(r, h, seg);
+        const tor = (r, t) => new THREE.TorusGeometry(r, t, 5, 8);
+        const tet = (r) => new THREE.TetrahedronGeometry(r);
         const add = (geo, mat, x, y, z, rx, ry, rz) => {
             const m = new THREE.Mesh(geo, mat);
             m.position.set(x, y, z);
@@ -3511,19 +2643,18 @@ class WorldSystems {
         const game = this.game;
         const pp = game.playerWorldPos;
 
-        // --- Pedestrians: EVERY NPC keeps living its designed daily route —
-        // nobody is teleported or re-spread randomly. Near the player they are
-        // simulated every frame; far away they advance in staggered time-sliced
-        // buckets (larger dt) so commutes still complete across the map. ---
+        // --- Pedestrians (only simulate near player) ---
+        // PERF: with 130+ NPCs, respawn a few per frame instead of all at once,
+        // and stagger mid-distance updates into buckets to keep CPU cost low.
+        this._respawnBudget = 4;
         for (const ped of this.pedestrians) {
             const d = Math.hypot(ped.position.x - pp.x, ped.position.z - pp.z);
             if (ped.state === 'DEAD') {
-                // Bodies rest where they fell until out of sight, then the
-                // worker returns to their SCHEDULED post (same identity).
-                if (ped.deadTimer > 20 && d > 150) this.respawnPed(ped);
-                else if (d <= 220) ped.update(deltaTime, pp, false);
+                if ((ped.deadTimer > 20 || d > 220) && this._respawnBudget-- > 0) this.respawnPed(ped);
+                else if (ped.deadTimer <= 20 && d <= 220) ped.update(deltaTime, pp, false);
                 continue;
             }
+            if (d > 220) { if (this._respawnBudget-- > 0) this.respawnPed(ped); continue; }
             if (d < 90) ped.update(deltaTime, pp, game.playerThreatening);
             else if (((ped.index + this.frameNo) & 7) === 0) ped.update(deltaTime * 8, pp, false);
         }
@@ -13295,6 +12426,4 @@ document.addEventListener('touchmove', function(e) {
     }
 }, { passive: false });
 
-    </script>
-</body>
-</html>
+    
