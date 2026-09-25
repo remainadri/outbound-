@@ -1572,28 +1572,42 @@ class InputManager {
 }
 
 // ============================================================
-// CHARACTER (Detailed Low-Poly Humanoid)
+// CHARACTER — PLAYABLE MALE PROTAGONIST "OUTBOUND"
+// Core Asset Spec: clean low-poly, hard-edged flat shading,
+// ~800-1200 triangles built from faceted primitives:
+//  - Head: 8-sided icosphere flattened at the chin, NO facial
+//    features (eyes/nose/mouth omitted entirely)
+//  - Hair: overlaid 8-to-10-sided extruded hemisphere, faceted
+//  - Neck: 6-sided cylinder; Chest & waist: 6-sided prisms
+//    tapering shoulders -> waist (inverted-triangle silhouette)
+//  - Limbs: 6-sided cylinders with angled elbow/knee ring loops
+//  - Hands: 5-sided wedge palm + 4-sided wedge thumb block
+//  - Feet: low-profile 6-sided angular wedges tapering to toes
+// Color atlas (flat faces, zero textures):
+//  hair/shoes #1A1A1A | skin #D2A679 | shirt #FF6600 | pants #E6E6E6
+// Rig names/offsets are preserved so CharacterAnimator is untouched.
 // ============================================================
+const OUTBOUND_PALETTE = {
+    HAIR_SHOES: 0x1A1A1A,   // solid matte dark charcoal
+    SKIN:       0xD2A679,   // flat light warm tan
+    SHIRT:      0xFF6600,   // vibrant matte orange
+    PANTS:      0xE6E6E6,   // light cool grey / off-white
+};
+
 class Character {
     constructor() {
         this.root = new THREE.Group();
         this.root.name = 'CharacterRoot';
 
+        const mat = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
         this.materials = {
-            skin: new THREE.MeshLambertMaterial({ color: 0xe8b896 }),
-            shirt: new THREE.MeshLambertMaterial({ color: 0xf2e6c9 }),   // cream shirt
-            jacket: new THREE.MeshLambertMaterial({ color: 0x1f2a44 }),  // navy blue jacket
-            trousers: new THREE.MeshLambertMaterial({ color: 0x2b3a5c }), // navy blue trousers
-            shoes: new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
-            hair: new THREE.MeshLambertMaterial({ color: 0x3a2a1a }),
-            belt: new THREE.MeshLambertMaterial({ color: 0x5a3a1a }),
-            eye: new THREE.MeshBasicMaterial({ color: 0x2a4a6a }),
-            eyeWhite: new THREE.MeshBasicMaterial({ color: 0xffffff }),
-            pupil: new THREE.MeshBasicMaterial({ color: 0x111111 }),
-            lip: new THREE.MeshLambertMaterial({ color: 0xc89080 }),
-            nose: new THREE.MeshLambertMaterial({ color: 0xd4a574 }),
-            eyebrow: new THREE.MeshLambertMaterial({ color: 0x2a1a0a }),
-            collar: new THREE.MeshLambertMaterial({ color: 0xf2e6c9 }), // cream collar
+            skin:     mat(OUTBOUND_PALETTE.SKIN),
+            shirt:    mat(OUTBOUND_PALETTE.SHIRT),
+            jacket:   mat(OUTBOUND_PALETTE.SHIRT),   // hero wears the orange shirt (no jacket layer)
+            trousers: mat(OUTBOUND_PALETTE.PANTS),
+            shoes:    mat(OUTBOUND_PALETTE.HAIR_SHOES),
+            hair:     mat(OUTBOUND_PALETTE.HAIR_SHOES),
+            belt:     mat(0x2A2A2A),
         };
 
         this.buildSkeleton();
@@ -1712,174 +1726,91 @@ class Character {
     }
 
     buildMeshes() {
-        const headGeo = new THREE.BoxGeometry(0.24, 0.28, 0.26);
-        const headMesh = new THREE.Mesh(headGeo, this.materials.skin);
-        headMesh.position.y = 0.14;
-        this.head.add(headMesh);
+        // ---- Faceted low-poly construction helpers -----------------------
+        const M = this.materials;
+        const addMesh = (geo, mat, parent, x, y, z, rx, ry, rz) => {
+            const m = new THREE.Mesh(geo, mat);
+            m.position.set(x, y, z);
+            if (rx || ry || rz) m.rotation.set(rx || 0, ry || 0, rz || 0);
+            parent.add(m);
+            return m;
+        };
+        // Wedge prism: n-sided cylinder scaled into a flat wedge.
+        const wedgeGeo = (w, h, dTop, dBot, sides) => {
+            const g = new THREE.CylinderGeometry(dTop, dBot, h, sides);
+            g.scale(w / Math.max(dTop, dBot, 0.001), 1, 1);
+            return g;
+        };
 
-        const eyeWhiteGeo = new THREE.SphereGeometry(0.03, 8, 6);
-        const eyeGeo = new THREE.SphereGeometry(0.02, 8, 6);
-        const pupilGeo = new THREE.SphereGeometry(0.012, 6, 4);
+        // ---- HEAD: 8-sided icosphere flattened at the chin ---------------
+        // Faceless per spec: eyes, nose, brows and mouth are omitted entirely.
+        const skull = addMesh(new THREE.IcosahedronGeometry(0.145, 1), M.skin, this.head, 0, 0.155, 0);
+        skull.scale.set(0.98, 1.02, 0.92);                        // slightly deep cranium
+        const chin = addMesh(new THREE.IcosahedronGeometry(0.09, 1), M.skin, this.head, 0, 0.045, 0.015);
+        chin.scale.set(0.95, 0.62, 0.88);                         // truncated jaw facet, chin flattening
+        const jawSide = new THREE.BoxGeometry(0.035, 0.09, 0.13);
+        addMesh(jawSide, M.skin, this.head, 0.095, 0.075, 0.01);  // cheek facet L
+        addMesh(jawSide, M.skin, this.head, -0.095, 0.075, 0.01); // cheek facet R
+        const earGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.018, 5);
+        addMesh(earGeo, M.skin, this.head, 0.132, 0.15, 0.005, 0, 0, Math.PI / 2);   // ear L (5-sided)
+        addMesh(earGeo, M.skin, this.head, -0.132, 0.15, 0.005, 0, 0, Math.PI / 2);  // ear R
 
-        const leftEyeWhite = new THREE.Mesh(eyeWhiteGeo, this.materials.eyeWhite);
-        leftEyeWhite.position.set(0.06, 0.16, 0.13);
-        this.head.add(leftEyeWhite);
-        const leftEye = new THREE.Mesh(eyeGeo, this.materials.eye);
-        leftEye.position.set(0.06, 0.16, 0.14);
-        this.head.add(leftEye);
-        const leftPupil = new THREE.Mesh(pupilGeo, this.materials.pupil);
-        leftPupil.position.set(0.06, 0.16, 0.15);
-        this.head.add(leftPupil);
+        // ---- HAIR: overlaid 8-to-10-sided extruded hemisphere cap --------
+        const hairCapGeo = new THREE.SphereGeometry(0.158, 9, 4, 0, Math.PI * 2, 0, Math.PI * 0.52);
+        const hairCap = addMesh(hairCapGeo, M.hair, this.head, 0, 0.155, -0.004);
+        hairCap.scale.set(0.98, 1.12, 0.96);                      // faceted dome, hard edges
+        addMesh(new THREE.BoxGeometry(0.2, 0.1, 0.055), M.hair, this.head, 0, 0.13, -0.115); // nape block
+        const sideHair = new THREE.BoxGeometry(0.03, 0.09, 0.1);
+        addMesh(sideHair, M.hair, this.head, 0.128, 0.16, -0.03);     // sideburn L
+        addMesh(sideHair, M.hair, this.head, -0.128, 0.16, -0.03);    // sideburn R
 
-        const rightEyeWhite = new THREE.Mesh(eyeWhiteGeo, this.materials.eyeWhite);
-        rightEyeWhite.position.set(-0.06, 0.16, 0.13);
-        this.head.add(rightEyeWhite);
-        const rightEye = new THREE.Mesh(eyeGeo, this.materials.eye);
-        rightEye.position.set(-0.06, 0.16, 0.14);
-        this.head.add(rightEye);
-        const rightPupil = new THREE.Mesh(pupilGeo, this.materials.pupil);
-        rightPupil.position.set(-0.06, 0.16, 0.15);
-        this.head.add(rightPupil);
+        // ---- NECK: 6-sided cylinder --------------------------------------
+        addMesh(new THREE.CylinderGeometry(0.055, 0.065, 0.1, 6), M.skin, this.neck, 0, 0.0, 0);
 
-        const eyebrowGeo = new THREE.BoxGeometry(0.05, 0.01, 0.02);
-        const leftEyebrow = new THREE.Mesh(eyebrowGeo, this.materials.eyebrow);
-        leftEyebrow.position.set(0.06, 0.2, 0.13);
-        leftEyebrow.rotation.z = 0.1;
-        this.head.add(leftEyebrow);
-        const rightEyebrow = new THREE.Mesh(eyebrowGeo, this.materials.eyebrow);
-        rightEyebrow.position.set(-0.06, 0.2, 0.13);
-        rightEyebrow.rotation.z = -0.1;
-        this.head.add(rightEyebrow);
+        // ---- TORSO: 6-sided prisms, tapered shoulders -> waist ------------
+        // Inverted-triangle silhouette: broad faceted chest narrowing to waist.
+        addMesh(new THREE.CylinderGeometry(0.26, 0.2, 0.34, 6), M.shirt, this.chest, 0, 0.1, 0);          // chest prism
+        const deltoid = new THREE.IcosahedronGeometry(0.085, 0);
+        addMesh(deltoid, M.shirt, this.leftArm, 0.01, 0.02, 0);       // shoulder cap L (20-face)
+        addMesh(deltoid, M.shirt, this.rightArm, -0.01, 0.02, 0);     // shoulder cap R
+        addMesh(new THREE.CylinderGeometry(0.2, 0.17, 0.16, 6), M.shirt, this.torso, 0, 0.05, 0);         // waist prism
+        addMesh(new THREE.CylinderGeometry(0.185, 0.16, 0.18, 6), M.trousers, this.pelvis, 0, -0.03, 0);  // hip prism
+        addMesh(new THREE.CylinderGeometry(0.19, 0.19, 0.045, 8), M.belt, this.pelvis, 0, 0.075, 0);      // belt ring
+        addMesh(new THREE.BoxGeometry(0.05, 0.045, 0.02), M.shoes, this.pelvis, 0, 0.075, -0.185);        // buckle
 
-        const noseGeo = new THREE.BoxGeometry(0.03, 0.04, 0.03);
-        const nose = new THREE.Mesh(noseGeo, this.materials.nose);
-        nose.position.set(0, 0.12, 0.14);
-        this.head.add(nose);
+        // ---- ARMS: 6-sided cylinders connected at an angled elbow joint ---
+        addMesh(new THREE.CylinderGeometry(0.062, 0.052, 0.3, 6), M.shirt, this.leftUpperArm, 0, -0.15, 0);
+        addMesh(new THREE.CylinderGeometry(0.05, 0.042, 0.26, 6), M.skin, this.leftForearm, 0, -0.13, 0);
+        addMesh(new THREE.TorusGeometry(0.05, 0.012, 4, 6), M.skin, this.leftForearm, 0, -0.005, 0, Math.PI / 2); // elbow ring loop
+        addMesh(new THREE.CylinderGeometry(0.062, 0.052, 0.3, 6), M.shirt, this.rightUpperArm, 0, -0.15, 0);
+        addMesh(new THREE.CylinderGeometry(0.05, 0.042, 0.26, 6), M.skin, this.rightForearm, 0, -0.13, 0);
+        addMesh(new THREE.TorusGeometry(0.05, 0.012, 4, 6), M.skin, this.rightForearm, 0, -0.005, 0, Math.PI / 2);
 
-        const mouthGeo = new THREE.BoxGeometry(0.06, 0.015, 0.02);
-        const mouth = new THREE.Mesh(mouthGeo, this.materials.lip);
-        mouth.position.set(0, 0.08, 0.13);
-        this.head.add(mouth);
+        // ---- HANDS: 5-sided wedge palm + single 4-sided wedge thumb -------
+        for (const hand of [this.leftHand, this.rightHand]) {
+            const sgn = hand === this.leftHand ? 1 : -1;
+            const palm = wedgeGeo(0.07, 0.1, 0.03, 0.055, 5);
+            palm.rotateX(Math.PI / 2);                            // taper toward the fingertips
+            addMesh(palm, M.skin, hand, 0, -0.05, 0);
+            const thumb = wedgeGeo(0.022, 0.05, 0.012, 0.02, 4);
+            addMesh(thumb, M.skin, hand, sgn * 0.038, -0.045, -0.03, 0.5, 0, sgn * -0.5);
+        }
 
-        const hairTopGeo = new THREE.BoxGeometry(0.26, 0.12, 0.28);
-        const hairTop = new THREE.Mesh(hairTopGeo, this.materials.hair);
-        hairTop.position.set(0, 0.26, -0.01);
-        this.head.add(hairTop);
+        // ---- LEGS: 6-sided cylinders with knee ring loops for bending -----
+        addMesh(new THREE.CylinderGeometry(0.085, 0.07, 0.42, 6), M.trousers, this.leftThigh, 0, -0.21, 0);
+        addMesh(new THREE.CylinderGeometry(0.068, 0.055, 0.4, 6), M.trousers, this.leftLowerLeg, 0, -0.2, 0);
+        addMesh(new THREE.TorusGeometry(0.068, 0.014, 4, 6), M.trousers, this.leftLowerLeg, 0, -0.005, 0, Math.PI / 2);
+        addMesh(new THREE.CylinderGeometry(0.085, 0.07, 0.42, 6), M.trousers, this.rightThigh, 0, -0.21, 0);
+        addMesh(new THREE.CylinderGeometry(0.068, 0.055, 0.4, 6), M.trousers, this.rightLowerLeg, 0, -0.2, 0);
+        addMesh(new THREE.TorusGeometry(0.068, 0.014, 4, 6), M.trousers, this.rightLowerLeg, 0, -0.005, 0, Math.PI / 2);
 
-        const hairSideGeo = new THREE.BoxGeometry(0.04, 0.15, 0.22);
-        const hairLeft = new THREE.Mesh(hairSideGeo, this.materials.hair);
-        hairLeft.position.set(0.13, 0.18, -0.02);
-        this.head.add(hairLeft);
-        const hairRight = new THREE.Mesh(hairSideGeo, this.materials.hair);
-        hairRight.position.set(-0.13, 0.18, -0.02);
-        this.head.add(hairRight);
-
-        const hairBackGeo = new THREE.BoxGeometry(0.22, 0.18, 0.04);
-        const hairBack = new THREE.Mesh(hairBackGeo, this.materials.hair);
-        hairBack.position.set(0, 0.18, -0.13);
-        this.head.add(hairBack);
-
-        const neckGeo = new THREE.CylinderGeometry(0.06, 0.07, 0.1, 6);
-        const neckMesh = new THREE.Mesh(neckGeo, this.materials.skin);
-        neckMesh.position.y = 0.0;
-        this.neck.add(neckMesh);
-
-        const collarGeo = new THREE.CylinderGeometry(0.09, 0.1, 0.04, 8);
-        const collar = new THREE.Mesh(collarGeo, this.materials.collar);
-        collar.position.y = 0.02;
-        this.neck.add(collar);
-
-        const chestGeo = new THREE.BoxGeometry(0.46, 0.32, 0.26);
-        const chestMesh = new THREE.Mesh(chestGeo, this.materials.shirt);
-        chestMesh.position.y = 0.1;
-        this.chest.add(chestMesh);
-
-        const jacketFrontGeo = new THREE.BoxGeometry(0.48, 0.3, 0.02);
-        const jacketFront = new THREE.Mesh(jacketFrontGeo, this.materials.jacket);
-        jacketFront.position.set(0, 0.1, 0.13);
-        this.chest.add(jacketFront);
-
-        const jacketBackGeo = new THREE.BoxGeometry(0.48, 0.3, 0.02);
-        const jacketBack = new THREE.Mesh(jacketBackGeo, this.materials.jacket);
-        jacketBack.position.set(0, 0.1, -0.13);
-        this.chest.add(jacketBack);
-
-        const pelvisGeo = new THREE.BoxGeometry(0.38, 0.22, 0.24);
-        const pelvisMesh = new THREE.Mesh(pelvisGeo, this.materials.trousers);
-        pelvisMesh.position.y = -0.05;
-        this.pelvis.add(pelvisMesh);
-
-        const beltGeo = new THREE.BoxGeometry(0.4, 0.05, 0.26);
-        const beltMesh = new THREE.Mesh(beltGeo, this.materials.belt);
-        beltMesh.position.y = 0.02;
-        this.pelvis.add(beltMesh);
-
-        const buckleGeo = new THREE.BoxGeometry(0.04, 0.04, 0.02);
-        const buckleMat = new THREE.MeshLambertMaterial({ color: 0xaaaaaa });
-        const buckle = new THREE.Mesh(buckleGeo, buckleMat);
-        buckle.position.set(0, 0.02, 0.13);
-        this.pelvis.add(buckle);
-
-        const abdomenGeo = new THREE.BoxGeometry(0.4, 0.16, 0.24);
-        const abdomenMesh = new THREE.Mesh(abdomenGeo, this.materials.shirt);
-        abdomenMesh.position.y = 0.05;
-        this.torso.add(abdomenMesh);
-
-        const shoulderGeo = new THREE.SphereGeometry(0.09, 8, 6);
-        const leftShoulder = new THREE.Mesh(shoulderGeo, this.materials.jacket);
-        leftShoulder.position.set(0.0, 0.0, 0);
-        this.leftUpperArm.add(leftShoulder);
-        const rightShoulder = new THREE.Mesh(shoulderGeo, this.materials.jacket);
-        rightShoulder.position.set(0.0, 0.0, 0);
-        this.rightUpperArm.add(rightShoulder);
-
-        const upperArmGeo = new THREE.BoxGeometry(0.11, 0.3, 0.11);
-        const leftUpperArmMesh = new THREE.Mesh(upperArmGeo, this.materials.jacket);
-        leftUpperArmMesh.position.y = -0.15;
-        this.leftUpperArm.add(leftUpperArmMesh);
-        const rightUpperArmMesh = new THREE.Mesh(upperArmGeo, this.materials.jacket);
-        rightUpperArmMesh.position.y = -0.15;
-        this.rightUpperArm.add(rightUpperArmMesh);
-
-        const forearmGeo = new THREE.BoxGeometry(0.1, 0.27, 0.1);
-        const leftForearmMesh = new THREE.Mesh(forearmGeo, this.materials.skin);
-        leftForearmMesh.position.y = -0.13;
-        this.leftForearm.add(leftForearmMesh);
-        const rightForearmMesh = new THREE.Mesh(forearmGeo, this.materials.skin);
-        rightForearmMesh.position.y = -0.13;
-        this.rightForearm.add(rightForearmMesh);
-
-        const handGeo = new THREE.BoxGeometry(0.08, 0.1, 0.06);
-        const leftHandMesh = new THREE.Mesh(handGeo, this.materials.skin);
-        leftHandMesh.position.y = -0.05;
-        this.leftHand.add(leftHandMesh);
-        const rightHandMesh = new THREE.Mesh(handGeo, this.materials.skin);
-        rightHandMesh.position.y = -0.05;
-        this.rightHand.add(rightHandMesh);
-
-        const thighGeo = new THREE.BoxGeometry(0.15, 0.42, 0.15);
-        const leftThighMesh = new THREE.Mesh(thighGeo, this.materials.trousers);
-        leftThighMesh.position.y = -0.21;
-        this.leftThigh.add(leftThighMesh);
-        const rightThighMesh = new THREE.Mesh(thighGeo, this.materials.trousers);
-        rightThighMesh.position.y = -0.21;
-        this.rightThigh.add(rightThighMesh);
-
-        const lowerLegGeo = new THREE.BoxGeometry(0.13, 0.4, 0.13);
-        const leftLowerLegMesh = new THREE.Mesh(lowerLegGeo, this.materials.trousers);
-        leftLowerLegMesh.position.y = -0.2;
-        this.leftLowerLeg.add(leftLowerLegMesh);
-        const rightLowerLegMesh = new THREE.Mesh(lowerLegGeo, this.materials.trousers);
-        rightLowerLegMesh.position.y = -0.2;
-        this.rightLowerLeg.add(rightLowerLegMesh);
-
-        const footGeo = new THREE.BoxGeometry(0.13, 0.09, 0.22);
-        const leftFootMesh = new THREE.Mesh(footGeo, this.materials.shoes);
-        leftFootMesh.position.set(0, -0.045, 0.05);
-        this.leftFoot.add(leftFootMesh);
-        const rightFootMesh = new THREE.Mesh(footGeo, this.materials.shoes);
-        rightFootMesh.position.set(0, -0.045, 0.05);
-        this.rightFoot.add(rightFootMesh);
+        // ---- FEET: low-profile 6-sided angular wedges tapering to toes ----
+        for (const foot of [this.leftFoot, this.rightFoot]) {
+            const shoe = wedgeGeo(0.11, 0.08, 0.06, 0.1, 6);
+            shoe.rotateX(-Math.PI / 2);                           // tip points forward (-Z is forward in this rig)
+            addMesh(shoe, M.shoes, foot, 0, -0.045, 0.05);
+            addMesh(new THREE.BoxGeometry(0.105, 0.03, 0.06), M.shoes, foot, 0, -0.02, -0.05); // heel block
+        }
 
         this.root.traverse((child) => {
             if (child.isMesh) {
@@ -2691,32 +2622,45 @@ function npcRng(seed) {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
 }
-
-// ---- 20 DISTINCT NPC VARIETIES (each tells a story) ---------------------
-// h = height scale, build = body width/weight scale, gender, skin/hair,
-// hours = shift window in game clock, hat/prop = silhouette identifiers.
+// ---- 15 DISTINCT NPC VARIETIES — 7 MALE + 8 FEMALE (each tells a story) --
+// The two BASE FIGURES from the asset spec drive every character:
+//   base:'m' -> male low-poly figure (faceless faceted head, inverted-triangle
+//               torso; spec palette hair/shoes #1A1A1A, skin #D2A679,
+//               shirt #FF6600, pants #E6E6E6 for the protagonist-style look)
+//   base:'f' -> female low-poly figure (sculpted jaw/cheek facets, drawn
+//               almond eyes + nose ridge + mouth line, asymmetrical bob of
+//               large polygon blocks, sports-bra cone bust, narrow cylinder
+//               waist, tapered legs; rust/auburn #B16A46 hair).
+// New varieties are designed by adjusting HEIGHT, WEIGHT/BUILD, BODY SHAPE,
+// clothes and colors on top of those bases. h = height scale, build = width/
+// weight scale, hours = shift window in game clock, hat/prop = silhouette ids.
 const NPC_VARIETIES = [
-    { id:'baker',      role:'Baker',              names:['Otto Krume','Hana Weiss'],     h:1.00, build:1.14, gender:'m', hours:[4,12],   shirt:0xF2EDE2, pants:0x4E342E, apron:true, hat:'chef',   hairCol:0x3E2723, skin:0xE8B98C, prop:null },
-    { id:'butcher',    role:'Butcher',            names:['Viktor Marek','Stana Petrova'],h:0.98, build:1.26, gender:'m', hours:[6,16],   shirt:0xECEFF1, pants:0xB71C1C, apron:true, hat:null,     hairCol:0x4E342E, skin:0xD9A66B, prop:'cleaver' },
-    { id:'office',     role:'Office worker',      names:['Daniel Reed','Maria Kovacs'],  h:1.02, build:0.94, gender:'m', hours:[8,17],   shirt:0x64B5F6, pants:0x263238, suit:true,  hat:null,     hairCol:0x2b1d0e, skin:0xF1C27D, prop:'briefcase' },
-    { id:'nurse',      role:'Night nurse',        names:['Elena Voss','Priya Nair'],     h:0.96, build:0.90, gender:'f', hours:[21,7],   shirt:0x4DB6AC, pants:0xFFFFFF, skirt:true, hat:null,     hairCol:0x5D4037, skin:0xC68642, prop:'clipboard' },
-    { id:'jogger',     role:'Morning jogger',     names:['Tomas Lukac','Greta Bauer'],   h:1.00, build:0.88, gender:'m', hours:[5,7],    shirt:0xFF8A65, pants:0x212121, headband:true, hat:null, hairCol:0x212121, skin:0xE0AC69, prop:null },
-    { id:'fisherman',  role:'Harbor fisherman',   names:['Old Barnaby','Kees van Daal'], h:0.97, build:1.08, gender:'m', hours:[3,11],   shirt:0x37474F, pants:0x455A64, hat:'cap', hatCol:0xBF360C, hairCol:0x9E9E9E, skin:0xA1662F, prop:'rod' },
-    { id:'student',    role:'University student', names:['Lena Fischer','Arik Sol'],     h:0.93, build:0.86, gender:'f', hours:[9,15],   shirt:0xBA68C8, pants:0x1A237E, backpack:true, hat:'beanie', hairCol:0xFFB300, skin:0xFFDBAC, prop:'book' },
-    { id:'businesswoman',role:'Banker',           names:['Sofia Marchetti','Ingrid Holm'],h:1.01,build:0.90, gender:'f', hours:[7,18],   shirt:0xF5F5F5, pants:0x212121, suit:true,  skirt:true, hat:null,     hairCol:0x3E2723, skin:0xE8B98C, prop:'briefcase' },
-    { id:'gardener',   role:'Parks gardener',     names:['Mateo Ruiz','Hinko Babic'],    h:0.99, build:1.05, gender:'m', hours:[6,14],   shirt:0x81C784, pants:0x5D4037, hat:'straw',  hairCol:0x4E342E, skin:0x8D5524, prop:'rake' },
-    { id:'postman',    role:'Mail carrier',       names:['Arthur Pen','Ivo Stanek'],     h:1.02, build:0.98, gender:'m', hours:[8,16],   shirt:0xFFD54F, pants:0x0D47A1, bag:true,   hat:'cap',    hairCol:0x6D4C41, skin:0xF1C27D, prop:'parcel' },
-    { id:'cop',        role:'Beat cop on patrol', names:['Officer Dane','Officer Kova'], h:1.04, build:1.06, gender:'m', hours:[6,22],   shirt:0x1A3A6B, pants:0x142C50, belt:true,  hat:'brim',   hairCol:0x212121, skin:0xC68642, prop:'radio' },
-    { id:'clerk',      role:'Shop clerk',         names:['Nina Park','Rosa Delgado'],    h:0.95, build:0.92, gender:'f', hours:[10,19],  shirt:0xF06292, pants:0x37474F, skirt:true, hat:null,     hairCol:0x212121, skin:0xFFDBAC, prop:'bag' },
-    { id:'drunk',      role:'Bar regular',        names:['Salty Jim','Branko T.'],       h:0.97, build:1.20, gender:'m', hours:[17,24],  shirt:0x8D6E63, pants:0x3E2723, hat:null,     hairCol:0x757575, skin:0xB0793B, prop:'bottle', wobble:true },
-    { id:'chef',       role:'Restaurant chef',    names:['Marco Rossi','Pierre Leblanc'],h:1.00, build:1.18, gender:'m', hours:[11,23],  shirt:0xFAFAFA, pants:0x212121, apron:true, hat:'chef',   hairCol:0x212121, skin:0xE0AC69, prop:'pan' },
-    { id:'mother',     role:'Mother on errands',  names:['Anna Berg','Lucia Costa'],     h:0.94, build:1.02, gender:'f', hours:[9,17],   shirt:0xAED581, pants:0x6D4C41, skirt:true, bag:true,   hat:null,     hairCol:0x8D6E63, skin:0xF1C27D, prop:'tote' },
-    { id:'mechanic',   role:'Garage mechanic',    names:['Dexter Vale','Milos Rataj'],   h:1.00, build:1.12, gender:'m', hours:[7,15],   shirt:0x42A5F5, pants:0x263238, belt:true,  hat:'cap',    hairCol:0x3E2723, skin:0xA1662F, prop:'wrench' },
-    { id:'elderly',    role:'Retired pensioner',  names:['Grandpa Elias','Mrs. Grundig'],h:0.90, build:1.00, gender:'f', hours:[8,12],   shirt:0xBCAAA4, pants:0x455A64, cane:true,  hat:null,     hairCol:0xCFD8DC, skin:0xE8B98C, prop:null },
-    { id:'firefighter',role:'On-duty firefighter',names:['Cade Ember','Rok Hladnik'],    h:1.06, build:1.16, gender:'m', hours:[7,19],   shirt:0xC62828, pants:0x212121, belt:true,  hat:'brim',   hairCol:0x4E342E, skin:0xD9A66B, prop:'axe' },
-    { id:'vendor',     role:'Market vendor',      names:['Yusuf Ali','Katerina Novak'],  h:0.99, build:1.08, gender:'f', hours:[7,15],   shirt:0xFFB74D, pants:0x33691E, apron:true, hat:'straw',  hairCol:0x212121, skin:0xC68642, prop:'crate' },
-    { id:'musician',   role:'Street musician',    names:['Florian Bach','DJ Kosey'],     h:1.01, build:0.92, gender:'m', hours:[16,23],  shirt:0x7E57C2, pants:0x1A237E, hat:'brim',   hairCol:0x212121, skin:0x8D5524, prop:'guitar' },
+    // ===== 7 MALE varieties =====
+    { id:'office',     role:'Office worker',      names:['Daniel Reed','Maria Kovacs'],  base:'m', gender:'m', h:1.02, build:0.94, hours:[8,17],   shirt:0x64B5F6, pants:0x263238, suit:true,  hat:null,     hairCol:0x1A1A1A, skin:0xD2A679, prop:'briefcase' },
+    { id:'jogger',     role:'Morning jogger',     names:['Tomas Lukac','Greta Bauer'],   base:'m', gender:'m', h:1.00, build:0.88, hours:[5,7],    shirt:0xFF8A65, pants:0x212121, headband:true, hat:null,    hairCol:0x1A1A1A, skin:0xE0AC69, prop:null },
+    { id:'gardener',   role:'Parks gardener',     names:['Mateo Ruiz','Hinko Babic'],    base:'m', gender:'m', h:0.99, build:1.05, hours:[6,14],   shirt:0x81C784, pants:0x5D4037, hat:'straw',  hairCol:0x4E342E, skin:0x8D5524, prop:'rake' },
+    { id:'postman',    role:'Mail carrier',       names:['Arthur Pen','Ivo Stanek'],     base:'m', gender:'m', h:1.02, build:0.98, hours:[8,16],   shirt:0xFFD54F, pants:0x0D47A1, bag:true,   hat:'cap',    hairCol:0x6D4C41, skin:0xF1C27D, prop:'parcel' },
+    { id:'chef',       role:'Restaurant chef',    names:['Marco Rossi','Pierre Leblanc'],base:'m', gender:'m', h:1.00, build:1.18, hours:[11,23],  shirt:0xFAFAFA, pants:0x212121, apron:true, hat:'chef',   hairCol:0x1A1A1A, skin:0xE0AC69, prop:'pan' },
+    { id:'mechanic',   role:'Garage mechanic',    names:['Dexter Vale','Milos Rataj'],   base:'m', gender:'m', h:1.00, build:1.12, hours:[7,15],   shirt:0x42A5F5, pants:0x263238, belt:true,  hat:'cap',    hairCol:0x3E2723, skin:0xA1662F, prop:'wrench' },
+    { id:'musician',   role:'Street musician',    names:['Florian Bach','DJ Kosey'],     base:'m', gender:'m', h:1.01, build:0.92, hours:[16,23],  shirt:0x7E57C2, pants:0x1A237E, hat:'brim',   hairCol:0x212121, skin:0x8D5524, prop:'guitar' },
+    // ===== 8 FEMALE varieties =====
+    { id:'nurse',      role:'Night nurse',        names:['Elena Voss','Priya Nair'],     base:'f', gender:'f', h:0.96, build:0.90, hours:[21,7],   shirt:0x4DB6AC, pants:0xFFFFFF, bra:true,   hat:null,     hairCol:0xB16A46, skin:0xF4D0C5, prop:'clipboard' },
+    { id:'student',    role:'University student', names:['Lena Fischer','Arik Sol'],     base:'f', gender:'f', h:0.93, build:0.86, hours:[9,15],   shirt:0xBA68C8, pants:0x1A237E, backpack:true, hat:'beanie', hairCol:0xFFB300, skin:0xFFDBAC, prop:'book' },
+    { id:'businesswoman',role:'Banker',           names:['Sofia Marchetti','Ingrid Holm'],base:'f',gender:'f', h:1.01, build:0.90, hours:[7,18],   shirt:0xF5F5F5, pants:0x212121, suit:true,  skirt:true, hat:null,     hairCol:0x3E2723, skin:0xE8B98C, prop:'briefcase' },
+    { id:'clerk',      role:'Shop clerk',         names:['Nina Park','Rosa Delgado'],    base:'f', gender:'f', h:0.95, build:0.92, hours:[10,19],  shirt:0xF06292, pants:0x37474F, skirt:true, hat:null,     hairCol:0x1A1A1A, skin:0xFFDBAC, prop:'bag' },
+    { id:'mother',     role:'Mother on errands',  names:['Anna Berg','Lucia Costa'],     base:'f', gender:'f', h:0.94, build:1.02, hours:[9,17],   shirt:0xAED581, pants:0x6D4C41, skirt:true, bag:true,   hat:null,     hairCol:0x8D6E63, skin:0xF1C27D, prop:'tote' },
+    { id:'elderly',    role:'Retired pensioner',  names:['Grandpa Elias','Mrs. Grundig'],base:'f', gender:'f', h:0.90, build:1.00, hours:[8,12],   shirt:0xBCAAA4, pants:0x455A64, cane:true,  hat:null,     hairCol:0xCFD8DC, skin:0xE8B98C, prop:null },
+    { id:'vendor',     role:'Market vendor',      names:['Yusuf Ali','Katerina Novak'],  base:'f', gender:'f', h:0.99, build:1.08, hours:[7,15],   shirt:0xFFB74D, pants:0x33691E, apron:true, hat:'straw',  hairCol:0x1A1A1A, skin:0xC68642, prop:'crate' },
+    { id:'runner',     role:'Track athlete',      names:['Iris Novak','Dana Cole'],      base:'f', gender:'f', h:1.04, build:0.86, hours:[6,9],    shirt:0x26C6DA, pants:0x1A1A1A, bra:true,   headband:true, hat:null,    hairCol:0xB16A46, skin:0xF4D0C5, prop:null },
 ];
+
+// ---- Female base-figure color atlas (asset spec) --------------------------
+const FEMALE_PALETTE = {
+    HAIR:  0xB16A46,   // matte rust / auburn
+    BRA:   0xFFFFFF,   // matte white sports bra
+    PANTS: 0x1A1A1A,   // dark charcoal bottoms / waistband
+    SKIN:  0xF4D0C5,   // flat light peach
+};
 
 // ---- Hand-placed residential streets (front-door points along sidewalks) --
 // Matches the suburban cottages of placeSuburbanHouses() and the avenues
